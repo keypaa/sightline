@@ -100,7 +100,7 @@ def m1_train(
     train = dataset.train[:n_calibrate] if calibrate_only else dataset.train
     features = torch.cat([encoder.encode([e.image]) for e in train], dim=0)
 
-    def make_batch(i: int) -> Batch:
+    def make_batch(i: int, features: torch.Tensor) -> Batch:
         example = train[i]
         prompt_text = tok.apply_chat_template(
             [{"role": "user", "content": "<|image_pad|>" * 256 + example.question}],
@@ -119,7 +119,7 @@ def m1_train(
         labels[:, prompt_ids.shape[1] :] = answer_ids
         return Batch(train_ids, features[i : i + 1], labels)
 
-    singles = [make_batch(i) for i in range(len(train))]
+    singles = [make_batch(i, features) for i in range(len(train))]
 
     def merge(part: list[Batch]) -> Batch:
         return Batch(
