@@ -1,0 +1,1 @@
+{"cpu_s": 19.6, "event": "m1a_generation", "generation_s": 19.1, "manifest_sha256": "a20be597caf75c042680545e524d108e36425cb54aaa19c75ce8bcb8d103f57b", "n_test": 1524, "n_train": 1536, "n_val": 1536, "peak_rss_mb": 3602.5}
