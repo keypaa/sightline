@@ -1,7 +1,7 @@
 # DECISION-0027: G0 sign-off
 
 Date: 2026-11-15
-Status: proposed
+Status: accepted
 Work package: WP11
 
 ## Context
