@@ -2,7 +2,7 @@
 
 A research and learning project on post-hoc visual retrofitting: attach a frozen vision encoder (Kimi MoonViT) to a frozen, text-only LLM through a small trainable projector, and measure honestly what vision capability results and where it stops. The long-term target is DeepSeek-V4-Flash-0731; the first reader is Qwen3-1.7B.
 
-**Status:** M0 (plumbing) not started. See CHARTER.md for the milestones.
+**Status:** M0 (plumbing) in progress. See CHARTER.md for the milestones.
 
 ## Start here
 
@@ -30,7 +30,24 @@ data/          local only, not in git: datasets and caches
 
 ## Setup
 
-Filled in at WP0: environment, how to run the tests and a dry run that writes a run record. Library versions are chosen by the rule in the M0 breakdown and recorded in DECISIONS/.
+Requires Python 3.12+ (developed on 3.14.8) and `uv`. The pinned environment is in `pyproject.toml` and `uv.lock`.
+
+```bash
+uv sync
+```
+
+The target GPU is an RTX PRO 6000 (sm_120). Before any GPU run, confirm `torch.cuda.get_arch_list()` includes `sm_120` and `torch.cuda.is_available()` is true. The current CPU-only shell exposes no NVIDIA device, so WP0 and WP1 run on CPU.
+
+## Commands
+
+```bash
+pytest                                          # run the test suite
+ruff check src tests                            # lint
+ruff format --check src tests                   # format check
+python -m sightline.record --dry-run --out experiments/_dryrun
+```
+
+Without `uv sync`, prefix Python commands with `PYTHONPATH=src`.
 
 ## Reproducibility
 

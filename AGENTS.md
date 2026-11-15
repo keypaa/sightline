@@ -90,7 +90,12 @@ reports/            generated reports (small, diffable)
 
 ## Commands
 
-Fill in at WP0 and keep current: environment setup, `pytest`, lint and format, a dry run that writes a run record.
+- Environment: `uv sync` (reads `uv.lock`; Python 3.12+; torch 2.13.0+cu130). Without sync, prefix Python commands with `PYTHONPATH=src`.
+- Tests: `pytest` (config in `pyproject.toml`; `pythonpath = ["src"]`).
+- Lint: `ruff check src tests`.
+- Format: `ruff format --check src tests` (write with `ruff format src tests`).
+- Dry run: `python -m sightline.record --dry-run --out experiments/_dryrun`.
+- GPU check: `python -c "import torch; print(torch.cuda.get_arch_list(), torch.cuda.is_available())"`.
 
 ## Style
 
