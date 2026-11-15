@@ -18,3 +18,7 @@ One short dated file per decision, named `NNNN-short-title.md` and based on `_te
 | 0010 | Library versions (WP0 rule) | WP0 |
 | 0011 | Reader and tokenizer revision pins | WP1 |
 | 0012 | K3 revision pin f831ab66814297da540d832a5235f8e904f29d06 | WP5, extraction result |
+| 0013 | Padding side: right padding | WP2 |
+| 0014 | Golden-splice and padding tolerances | WP2 |
+| 0015 | Vendor the K3 MoonViT-V2 tower | WP5 |
+| 0016 | K3 tower attention has no SDPA path | WP5 |
