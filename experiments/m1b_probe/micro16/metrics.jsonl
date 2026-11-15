@@ -1,0 +1,1 @@
+{"elapsed_s": 46.7, "event": "m1b_probe", "loss_first": 16.192950010299683, "loss_last": 22.21240234375, "micro_batch": 16, "peak_gpu_memory_mb": 32361.2, "peak_rss_mb": 9315.7, "seed": 0, "step_s": 2.1057, "steps": 20, "warmup": 2}
