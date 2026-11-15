@@ -54,6 +54,7 @@ def write_safetensors(path: Path, tensors: dict, metadata: dict):
     for k in names:
         t = tensors[k]; header[k] = {"dtype": t["dtype"], "shape": t["shape"], "data_offsets": [off, off + len(t["raw"])]}; off += len(t["raw"])
     hb = json.dumps(header, separators=(",", ":")).encode(); hb += b" " * (-len(hb) % 8)
+    path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "wb") as f:
         f.write(struct.pack("<Q", len(hb))); f.write(hb)
         for k in names: f.write(tensors[k]["raw"])
