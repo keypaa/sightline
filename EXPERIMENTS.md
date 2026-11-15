@@ -21,4 +21,15 @@ Decision: what happens next, and the DECISIONS file it created, if any.
 
 ## Log
 
-(empty: the first entry is written when the first experiment runs, expected in WP10 of M0)
+## EXP-0001: WP10 32-example overfit (G0)
+
+Date: 2026-11-15
+Milestone and gate: M0 / G0
+Question: can the frozen Qwen3-1.7B + K3 MoonViT-V2 + trained projector reach 99% exact match on 32 scenes within 500 steps, and do the blank/shuffled/swapped controls collapse to chance?
+Hypothesis and pass rule: DECISIONS 0025 — 32/32 within 500 steps on at least 2 of 3 seeds; controls <= 20%; vision-minus-blind >= 79 points.
+The one change: train the WP7 projector on the 32 WP9 scenes (8 colors x 4 shapes).
+Config: `experiments/wp10_overfit/run.json`.
+Run records: `experiments/wp10_overfit/metrics.jsonl`.
+Result: 3/3 seeds pass; steps_to_99 125/125/150; controls 0% / 6.25% / 6.25%; vision-minus-blind 100%; answer loss gap 15.66 / 15.80 / 15.72. Modal A10G, 1.086 GPU-hours.
+Interpretation: the overfit is vision-driven; the controls collapse to chance or below; the projector can fit the 32 scenes.
+Decision: G0 sign-off proposed in DECISIONS/0027; no M1 until approved.

@@ -22,4 +22,12 @@ python3 modal/wp10_overfit.py --seed 0
 
 It runs on **A10G (24 GB)**: the T4 OOMs at micro-batch 8 (13.75 GiB) and micro-batch 4 (13.24 GiB). The A10G fits micro-batch 8. The function returns the exact match, blank/shuffled/swapped controls, answer loss gap, per-step loss, elapsed time and memory.
 
+## Conformance
+
+`conformance.py` runs the heavy K3/K2.6 MoonViT tower parity tests on a T4.
+
+```bash
+python3 modal/conformance.py
+```
+
 The Modal token stays in the CLI profile; it is not stored here.

@@ -88,3 +88,35 @@ def test_cache_matches_recompute(reader) -> None:
         pad_token_id=tok.pad_token_id,
     )
     assert torch.equal(cached, recompute)
+
+
+def long_prompt_ids(tok) -> torch.Tensor:
+    text = tok.apply_chat_template(
+        [
+            {
+                "role": "user",
+                "content": "<|image_pad|>" * 64 + "What color is the shape?",
+            }
+        ],
+        add_generation_prompt=True,
+        enable_thinking=False,
+        tokenize=False,
+    )
+    return tok(text, return_tensors="pt")["input_ids"]
+
+
+def test_chunked_prefill_matches_single(reader) -> None:
+    tok, model = reader
+    ids = long_prompt_ids(tok)
+    half = ids.shape[1] // 2
+    with torch.no_grad():
+        single = model(input_ids=ids, use_cache=True)
+        first = model(input_ids=ids[:, :half], use_cache=True)
+        second = model(
+            input_ids=ids[:, half:],
+            past_key_values=first.past_key_values,
+            use_cache=True,
+        )
+    torch.testing.assert_close(
+        single.logits[:, -1], second.logits[:, -1], rtol=0, atol=1e-4
+    )

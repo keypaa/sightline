@@ -32,3 +32,5 @@ One short dated file per decision, named `NNNN-short-title.md` and based on `_te
 | 0024 | Minimal synthetic data | WP9 |
 | 0025 | 32-example overfit pass rule and control thresholds | WP10 |
 | 0026 | WP10 overfit runs on A10G | WP10 |
+| 0027 | G0 sign-off | WP11 |
+| 0028 | Chunked-prefill tolerance | WP11 |
