@@ -1,3 +1,4 @@
 {"event": "wp2_tests", "failed": 0, "passed": 34, "suite_seconds": 39.34}
 {"bf16_golden_splice_max_abs_diff": 0.0, "event": "calibration", "fp32_vs_bf16_plain_max_abs_diff": 1.587961, "frozen_bf16_tolerance": 0.001, "padding_tolerance": 0.0001}
 {"event": "memory", "models_loaded_one_at_a_time": true, "peak_fp32_mb": 12625.8}
+{"bf16_splice_vs_plain": {"argmax_mismatch_count": 0, "argmax_mismatch_rate": 0.0, "argmax_mismatch_total": 6, "kl_final": 0.0, "kl_max": 0.0, "kl_mean": 0.0, "max_abs_diff": 0.0, "max_rel_diff": 0.0}, "event": "calibration_extended", "fp32_vs_bf16_plain": {"argmax_mismatch_count": 0, "argmax_mismatch_rate": 0.0, "argmax_mismatch_total": 6, "atol_for_rtol_0": 1.587961, "kl_final": 0.001784, "kl_max": 0.078349, "kl_mean": 0.013842, "max_abs_diff": 1.587961, "max_rel_diff": 33699.9, "rtol_for_atol_0": 33699.9}, "frozen_bf16_tolerance": {"atol": 0.001, "rtol": 0.0}}

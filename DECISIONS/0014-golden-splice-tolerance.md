@@ -9,17 +9,28 @@ The conformance suite needs frozen tolerances. Thresholds are recorded before th
 
 ## Calibration
 
-`tools/calibrate_bf16_tolerance.py` on the pinned Qwen3-1.7B, CPU, one model at a time:
+`tools/calibrate_bf16_tolerance.py` on the pinned Qwen3-1.7B, CPU, one model at a time. Logits are compared at all 6 positions of the prompt; KL is in nats.
+
+| Measurement | fp32 vs bf16 plain | bf16 splice vs plain |
+| --- | --- | --- |
+| Max absolute logit difference | 1.587961 | 0.0 |
+| Max relative logit difference | 33699.9 | 0.0 |
+| KL divergence, mean | 0.013842 | 0.0 |
+| KL divergence, max | 0.078349 | 0.0 |
+| KL divergence, final position | 0.001784 | 0.0 |
+| Argmax mismatch | 0 / 6 (0.0%) | 0 / 6 (0.0%) |
+| atol needed with rtol = 0 | 1.587961 | 0.0 |
+| rtol needed with atol = 0 | 33699.9 | 0.0 |
+| Peak RSS, fp32 load | 12,378.1 MB | — |
+
+Other measurements:
 
 | Measurement | Value |
 | --- | --- |
-| Peak RSS, fp32 load | 12,625.8 MB |
-| fp32 vs bf16 plain forward, max abs logit diff | 1.587961 |
-| bf16 golden splice (plain vs spliced), max abs logit diff | 0.0 |
 | fp32 golden splice | exact (`torch.equal`) |
 | Real-reader padding invariance, observed max abs diff | 2.1e-5 |
 
-The fp32-vs-bf16 difference is the precision gap, not a splice error. The bf16 splice path is exactly identical on this reader; the tolerance is a floor for kernel and hardware variation.
+The max relative difference is dominated by logits near zero and is not a useful tolerance for logits. The meaningful precision checks are the argmax (no change at any position) and the KL divergence (mean 0.014 nats, final position 0.0018 nats). The bf16 splice path is exactly identical to the bf16 plain forward on this reader; the frozen tolerance is a floor for kernel and hardware variation.
 
 ## Decision
 

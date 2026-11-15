@@ -2,8 +2,15 @@
 """Calibrate the bf16 golden-splice tolerance on the pinned reader.
 
 Loads the reader in fp32, records the logits and frees it; then loads bf16,
-records the plain and spliced logits, and prints the maximum absolute
-differences. The frozen tolerance is recorded in DECISIONS/0014.
+records the plain and spliced logits, and prints a fuller comparison than a
+single max-abs difference:
+
+  - max absolute and relative logit difference
+  - KL divergence (expected || actual), mean, max and final position
+  - argmax mismatch count and rate
+  - the atol/rtol that each comparison would need
+
+The frozen tolerance is recorded in DECISIONS/0014.
 
 Run from the repository root:
 
@@ -13,6 +20,7 @@ Run from the repository root:
 from __future__ import annotations
 
 import gc
+import json
 import resource
 import sys
 from pathlib import Path
@@ -42,6 +50,34 @@ def make_ids(tok) -> torch.Tensor:
     return ids
 
 
+def compare(expected: torch.Tensor, actual: torch.Tensor) -> dict:
+    expected = expected.float()
+    actual = actual.float()
+    abs_diff = (actual - expected).abs()
+    rel_diff = abs_diff / (expected.abs() + 1e-12)
+
+    log_p = torch.log_softmax(expected, dim=-1)
+    log_q = torch.log_softmax(actual, dim=-1)
+    kl = (log_p.exp() * (log_p - log_q)).sum(-1)
+
+    am_expected = expected.argmax(-1)
+    am_actual = actual.argmax(-1)
+    mismatch = am_expected != am_actual
+
+    return {
+        "max_abs_diff": abs_diff.max().item(),
+        "max_rel_diff": rel_diff.max().item(),
+        "kl_mean": kl.mean().item(),
+        "kl_max": kl.max().item(),
+        "kl_final": kl[0, -1].item(),
+        "argmax_mismatch_count": int(mismatch.sum()),
+        "argmax_mismatch_total": int(mismatch.numel()),
+        "argmax_mismatch_rate": mismatch.float().mean().item(),
+        "atol_for_rtol_0": abs_diff.max().item(),
+        "rtol_for_atol_0": rel_diff.max().item(),
+    }
+
+
 def main() -> int:
     if not (MODEL_ROOT / "config.json").exists():
         print(f"missing {MODEL_ROOT}/config.json; run the WP1 snapshot step", file=sys.stderr)
@@ -64,15 +100,14 @@ def main() -> int:
         spliced = model(inputs_embeds=splice(ids, visual, IMAGE_PAD, embed.weight)).logits.clone()
     peak_after_bf16 = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
 
-    plain_diff = (fp32_logits.float() - plain.float()).abs().max().item()
-    splice_diff = (plain.float() - spliced.float()).abs().max().item()
-    suggested = max(2.0 * splice_diff, 1e-3)
+    plain_vs_fp32 = compare(fp32_logits, plain)
+    splice_vs_plain = compare(plain, spliced)
 
     print(f"peak_fp32_mb={peak_fp32:.1f}")
     print(f"peak_after_bf16_mb={peak_after_bf16:.1f}")
-    print(f"fp32_vs_bf16_plain_max_abs_diff={plain_diff:.6e}")
-    print(f"bf16_golden_splice_max_abs_diff={splice_diff:.6e}")
-    print(f"suggested_bf16_tolerance={suggested:.6e}")
+    print("fp32_vs_bf16_plain " + json.dumps(plain_vs_fp32, sort_keys=True))
+    print("bf16_splice_vs_plain " + json.dumps(splice_vs_plain, sort_keys=True))
+    print("frozen_bf16_tolerance " + json.dumps({"atol": 1e-3, "rtol": 0.0}, sort_keys=True))
     return 0
 
 
