@@ -6,7 +6,7 @@ Instructions for any coding agent working in this repository (Claude Code, Codex
 
 Sightline is a clean-break research repository on post-hoc visual retrofitting: attach a frozen vision encoder (Kimi MoonViT) to a frozen text-only LLM through a small trainable projector, then measure honestly what vision capability results. Long-term target: Kimi K3's MoonViT-V2 to DeepSeek-V4-Flash-0731. The owner is learning, so understanding and honest evidence matter more than speed or headline numbers.
 
-**Current stage: M0 complete** (G0 signed off 2026-11-15 in DECISIONS/0027). M1 (synthetic recognition) is next.
+**Current stage: M0 complete** (G0 signed off 2026-11-15 in DECISIONS/0027). M1 in progress (M1b training).
 
 ## Where things are written down
 
