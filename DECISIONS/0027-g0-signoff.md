@@ -23,4 +23,4 @@ M0 is complete; M1 (synthetic recognition) can start after the owner signs.
 
 ## Open items
 - [U] bf16 golden-splice and FA2-vs-eager on the RTX PRO 6000 (batched GPU session). Owner: implementation agent. Closing step: GPU box.
-- [U] K3/K2.6 tower conformance on Modal T4 (running; see `modal/conformance.py`). Owner: implementation agent. Closing step: read the Modal result and update `reports/g0.md`.
+- Closed: K3/K2.6 tower conformance on Modal T4 returncode 0 (all tower tests pass).
