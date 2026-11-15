@@ -9,6 +9,7 @@ step and RNG states so a run can resume exactly.
 from __future__ import annotations
 
 import random
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -117,6 +118,41 @@ class Trainer:
         while self.step < max_steps:
             self.train_step()
         return self.losses
+
+    def probe(self, steps: int, warmup: int = 2) -> dict[str, Any]:
+        """Time ``steps`` optimizer steps after ``warmup`` untimed ones.
+
+        Used to record a baseline before an optimization (project rule 9):
+        the warmup steps absorb cudnn autotuning and allocator growth, so the
+        reported ``step_s`` is steady-state. No checkpoint is written; the
+        caller discards the probe run.
+        """
+
+        if steps <= 0:
+            raise ValueError(f"steps must be positive, got {steps}")
+        if warmup:
+            self.train(max_steps=self.step + warmup)
+        if self.device.type == "cuda":
+            torch.cuda.synchronize(self.device)
+            torch.cuda.reset_peak_memory_stats(self.device)
+        first = len(self.losses)
+        started = time.perf_counter()
+        self.train(max_steps=self.step + steps)
+        if self.device.type == "cuda":
+            torch.cuda.synchronize(self.device)
+        elapsed = time.perf_counter() - started
+        return {
+            "steps": steps,
+            "warmup": warmup,
+            "step_s": round(elapsed / steps, 4),
+            "loss_first": self.losses[first],
+            "loss_last": self.losses[-1],
+            "peak_gpu_memory_mb": round(
+                torch.cuda.max_memory_allocated(self.device) / 1024 / 1024, 1
+            )
+            if self.device.type == "cuda"
+            else None,
+        }
 
     def state_dict(self) -> dict[str, Any]:
         cuda_rng = torch.cuda.get_rng_state() if torch.cuda.is_available() else None

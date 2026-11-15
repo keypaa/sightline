@@ -2,7 +2,8 @@
 """Run the M1 training and G1 evaluation on the local GPU.
 
 Usage:
-    python tools/run_m1.py --seed 0 --max-steps 2048 --micro-batch 8
+    python tools/run_m1.py --seed 0 --max-steps 2048 --micro-batch 16
+    python tools/run_m1.py --seed 0 --probe-steps 20 --micro-batch 16
     python tools/run_m1.py --seed 0 --eval-only
 
 Settings are the Baseten reference: global batch 128, AdamW (0.9, 0.95),
@@ -41,6 +42,11 @@ QWEN3_REVISION = "70d244cc86ccca08cf5af4e1e306ecf908b1ad5e"
 IMAGE_PAD = 151655
 MODEL_ROOT = Path("artifacts/models/Qwen3-1.7B")
 K3_WEIGHTS = Path("artifacts/k3_vision_f831ab66.safetensors")
+CHAT_TEMPLATE = {
+    "tokenizer_sha256": "d5d09f07b48c3086c508b30d1c9114bd1189145b74e982a265350c923acd8101",
+    "rendered_sha256": "1d91a8fec65d03716b986d047a50d68711028dd97f742f687ef69bee7379c454",
+    "enable_thinking": False,
+}
 
 
 def load_reader():
@@ -176,6 +182,12 @@ def main() -> int:
     parser.add_argument("--micro-batch", type=int, default=8)
     parser.add_argument("--lr", type=float, default=3e-4)
     parser.add_argument("--eval-only", action="store_true")
+    parser.add_argument(
+        "--probe-steps",
+        type=int,
+        default=None,
+        help="time N steps (plus 2 untimed warmup) and exit; writes no checkpoint",
+    )
     args = parser.parse_args()
 
     if not torch.cuda.is_available():
@@ -223,6 +235,32 @@ def main() -> int:
 
     started = time.perf_counter()
     checkpoint = Path(f"artifacts/m1b/seed{args.seed}/projector.pt")
+    if args.probe_steps is not None:
+        probe = trainer.probe(args.probe_steps)
+        usage = resource.getrusage(resource.RUSAGE_SELF)
+        probe["peak_rss_mb"] = round(usage.ru_maxrss / 1024, 1)
+        probe["elapsed_s"] = round(time.perf_counter() - started, 2)
+        probe["seed"] = args.seed
+        probe["micro_batch"] = args.micro_batch
+        record = RunRecord(
+            Path(f"experiments/m1b_probe/micro{args.micro_batch}"),
+            dry_run=False,
+            config=resolve_config(Config()),
+            runtime={
+                "n_visual_tokens": 256,
+                "reader_hidden_size": 2048,
+                "projector_hidden_width": 4096,
+                "k3_tower_width": 4096,
+                "derived_at_runtime": True,
+            },
+            chat_template=CHAT_TEMPLATE,
+            outcome=f"M1b probe: micro batch {args.micro_batch}, {args.probe_steps} timed steps",
+        )
+        record.write()
+        record.append_metric({"event": "m1b_probe", **probe})
+        print(json.dumps(probe, indent=2))
+        return 0
+
     if args.eval_only:
         state = torch.load(checkpoint, weights_only=False)
         trainer.projector.load_state_dict(state["projector"])
@@ -265,11 +303,7 @@ def main() -> int:
             "k3_tower_width": 4096,
             "derived_at_runtime": True,
         },
-        chat_template={
-            "tokenizer_sha256": "d5d09f07b48c3086c508b30d1c9114bd1189145b74e982a265350c923acd8101",
-            "rendered_sha256": "1d91a8fec65d03716b986d047a50d68711028dd97f742f687ef69bee7379c454",
-            "enable_thinking": False,
-        },
+        chat_template=CHAT_TEMPLATE,
         outcome="M1b: training + G1 evaluation",
     )
     record.write()

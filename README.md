@@ -62,6 +62,7 @@ python3 tools/extract_k3_vision.py --repo moonshotai/Kimi-K2.6 --revision 7eb500
 python3 modal/wp10_overfit.py --seed 0          # WP10 overfit on Modal A10G
 python3 modal/conformance.py                    # K3/K2.6 tower conformance on Modal T4
 PYTHONPATH=src python tools/run_m1.py --seed 0 --max-steps 2048 --micro-batch 8
+PYTHONPATH=src python tools/run_m1.py --seed 0 --probe-steps 20 --micro-batch 16
 PYTHONPATH=src python tools/run_m1.py --seed 0 --eval-only
 ```
 

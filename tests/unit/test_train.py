@@ -179,3 +179,25 @@ def test_cycle_reuses_batches() -> None:
     assert trainer.step == 4
     assert len(trainer.losses) == 4
     assert all(math.isfinite(loss) for loss in trainer.losses)
+
+
+def test_probe_reports_step_time_and_memory() -> None:
+    model = tiny_model()
+    batches = make_batches(seed=5, n_micro=4)
+    trainer = make_trainer(model, batches)
+    trainer.max_steps = 32
+    trainer.cycle = True
+
+    report = trainer.probe(3, warmup=2)
+
+    assert trainer.step == 5
+    assert len(trainer.losses) == 5
+    assert report["steps"] == 3
+    assert report["warmup"] == 2
+    assert report["step_s"] > 0.0
+    assert report["loss_first"] == trainer.losses[2]
+    assert report["loss_last"] == trainer.losses[4]
+    assert report["peak_gpu_memory_mb"] is None
+
+    with pytest.raises(ValueError):
+        trainer.probe(0)
