@@ -1,0 +1,4 @@
+{"deselected": 6, "event": "default_suite", "passed": 38, "suite_seconds": 41.62}
+{"event": "slow_tower", "images": 20, "note": "one image per forward; eager attention is CPU-bound", "one_image_peak_rss_mb": 3130.9, "passed": 6, "peak_rss_mb": 3137.6}
+{"event": "tower_load", "missing": 0, "tensors": 165, "unexpected": 0}
+{"event": "tower_output", "flattened": [256, 4096], "shape": [256, 4, 1024]}

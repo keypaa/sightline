@@ -11,8 +11,8 @@ never hard-coded. The tower is frozen and runs under ``torch.no_grad()``.
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence
 
 import torch
 from PIL import Image
@@ -59,8 +59,7 @@ class K3VisionEncoder:
         missing, unexpected = model.load_state_dict(tower_state, strict=False)
         if missing or unexpected:
             raise RuntimeError(
-                f"tower weight mismatch: {len(missing)} missing, "
-                f"{len(unexpected)} unexpected"
+                f"tower weight mismatch: {len(missing)} missing, {len(unexpected)} unexpected"
             )
 
         self.device = torch.device(device)
@@ -80,9 +79,7 @@ class K3VisionEncoder:
         kernel_h, kernel_w = self.merge_kernel_size
         return (height // kernel_h) * (width // kernel_w)
 
-    def preprocess(
-        self, images: Sequence[Image.Image]
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    def preprocess(self, images: Sequence[Image.Image]) -> tuple[torch.Tensor, torch.Tensor]:
         medias = [{"type": "image", "image": image.convert("RGB")} for image in images]
         batch = self.processor.preprocess(medias, return_tensors="pt")
         pixel_values = batch["pixel_values"].to(device=self.device, dtype=self.dtype)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import numpy as np
@@ -9,12 +10,14 @@ from PIL import Image
 
 from sightline.vision_k3_encoder import K3VisionEncoder
 
+# The eager tower is CPU-bound. The default is the 20-image acceptance run; set
+# SIGHTLINE_VISION_IMAGE_COUNT to a smaller number for a quick check.
+IMAGE_COUNT = int(os.environ.get("SIGHTLINE_VISION_IMAGE_COUNT", "20"))
+
 pytestmark = [
     pytest.mark.skipif(
         not (
-            Path(__file__).resolve().parents[2]
-            / "artifacts"
-            / "k3_vision_f831ab66.safetensors"
+            Path(__file__).resolve().parents[2] / "artifacts" / "k3_vision_f831ab66.safetensors"
         ).exists(),
         reason="extracted tower not present; run WP5 extraction",
     ),
@@ -74,14 +77,15 @@ def test_tower_uses_eager_attention(encoder: K3VisionEncoder) -> None:
     assert encoder.model.encoder.blocks[0].attn_implementation == "eager"
 
 
-def test_twenty_images(encoder: K3VisionEncoder) -> None:
-    images = make_images(20)
+def test_image_batch(encoder: K3VisionEncoder) -> None:
+    images = make_images(IMAGE_COUNT)
     got = encoder.encode(images)
-    assert tuple(got.shape) == (20, 256, 4096)
+    assert tuple(got.shape) == (IMAGE_COUNT, 256, 4096)
     assert torch.isfinite(got).all()
 
     # The eager path runs one image per forward; the wrapper must not reorder
     # or mix images. Check a few rows against single-image calls.
-    for index in (0, 7, 19):
+    indices = sorted({0, min(7, IMAGE_COUNT - 1), IMAGE_COUNT - 1})
+    for index in indices:
         single = encoder.encode([images[index]])
         torch.testing.assert_close(single[0], got[index], rtol=0, atol=0)
