@@ -1,0 +1,2807 @@
+{
+ "repo": "moonshotai/Kimi-K2.6",
+ "revision": "7eb5002f6aadc958aed6a9177b7ed26bb94011bb",
+ "bytes": 942287840,
+ "parameters": {
+  "vision_tower.": 416866032,
+  "mm_projector.": 54277888
+ },
+ "file_sha256": "ca1eeae268857ad13b2212d7781e5aa38fe13987a4a43c808b6487694bde4132",
+ "tensors": {
+  "mm_projector.pre_norm.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00063-of-000064.safetensors",
+   "sha256": "7196b987ad27fe65b4b0d714125655808c7debeb35131a6160b45e5f2812fb47"
+  },
+  "mm_projector.pre_norm.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00063-of-000064.safetensors",
+   "sha256": "6089a4928a3f42698ab2ae975ea77f1de5d2f9a7e002f906b67ae1b35bbfcbb5"
+  },
+  "mm_projector.proj.0.bias": {
+   "shape": [
+    4608
+   ],
+   "dtype": "BF16",
+   "shard": "model-00063-of-000064.safetensors",
+   "sha256": "3d2c9d74c988cfe01d9316fbdad3726ff03cf6ee9be3fb8f33bd01b68f4a8745"
+  },
+  "mm_projector.proj.0.weight": {
+   "shape": [
+    4608,
+    4608
+   ],
+   "dtype": "BF16",
+   "shard": "model-00063-of-000064.safetensors",
+   "sha256": "d4afac8e0ecc614ef2faa93c520eaa51721403cb83bd09169e3843a03f8e0236"
+  },
+  "mm_projector.proj.2.bias": {
+   "shape": [
+    7168
+   ],
+   "dtype": "BF16",
+   "shard": "model-00063-of-000064.safetensors",
+   "sha256": "629fe94771f57c18f0f62210bc5db5b21a2f7019e5d6cead0d0dfd678e8046b2"
+  },
+  "mm_projector.proj.2.weight": {
+   "shape": [
+    7168,
+    4608
+   ],
+   "dtype": "BF16",
+   "shard": "model-00063-of-000064.safetensors",
+   "sha256": "e3feaa5783496202e2edeb43aa0f61364c32b965d2278a573e3eacb259fdcd80"
+  },
+  "vision_tower.encoder.blocks.0.mlp.fc0.bias": {
+   "shape": [
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "19ede61953642e13f7b03e98db678ec6b2ec73cbbf2504e64959b119081196b5"
+  },
+  "vision_tower.encoder.blocks.0.mlp.fc0.weight": {
+   "shape": [
+    4304,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "70e18825ea0f2b931530656c971144d82568be83f4bd7015cff830a892e741df"
+  },
+  "vision_tower.encoder.blocks.0.mlp.fc1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "d1f97a7afaa6cbb90a1c07b6a7a6c78a7b68c9937e8a483b6070cfb471715a06"
+  },
+  "vision_tower.encoder.blocks.0.mlp.fc1.weight": {
+   "shape": [
+    1152,
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "d3271d7ba41513018a5c179f7300b96fa3ec2339e87a4b80e6c8ab002022a684"
+  },
+  "vision_tower.encoder.blocks.0.norm0.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "9ac2278879db88e4f0bcb31d39b327f669bde625b40c7061426c11a17bc16e24"
+  },
+  "vision_tower.encoder.blocks.0.norm0.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "0d6b05215e9132a1d511c3a4c11020de5187ce0d126f8e156d0340839cba5e0f"
+  },
+  "vision_tower.encoder.blocks.0.norm1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "934933491f2e578f1ac0fd2b30e6a7f09605719e2d5bc054a6061cf1fe8d93a3"
+  },
+  "vision_tower.encoder.blocks.0.norm1.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "0dff74ae7cbbb98b1c9b32cf6ff3902bb044f0316f35a3dfb48fd44a4a61162b"
+  },
+  "vision_tower.encoder.blocks.0.wo.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "a1eb92ee43db69f21d28a7b8f156c1ed5372c34190ad4c3a6b7a397f98ef197d"
+  },
+  "vision_tower.encoder.blocks.0.wo.weight": {
+   "shape": [
+    1152,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "993ac4f19b5722405126515355b7ae49d6beee4933df5235db37d1f67e46aafb"
+  },
+  "vision_tower.encoder.blocks.0.wqkv.bias": {
+   "shape": [
+    3456
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "306bf9c26045c4385bcdf7b4211cc726d9a64eb710fb645dccd32335a071aff1"
+  },
+  "vision_tower.encoder.blocks.0.wqkv.weight": {
+   "shape": [
+    3456,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "22885404a0c26075bb907b244cdee1c4ff6c06ad91a1fcbfdaa689b572e9d44d"
+  },
+  "vision_tower.encoder.blocks.1.mlp.fc0.bias": {
+   "shape": [
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "8d6f961e67736bf3229193e26005bccf7148a3316fff9ab204c12b61eefc9752"
+  },
+  "vision_tower.encoder.blocks.1.mlp.fc0.weight": {
+   "shape": [
+    4304,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "0caf6e026fb45e28f8453c4c3cffaac6c69327ecfabf660a6f6b5406676a15f1"
+  },
+  "vision_tower.encoder.blocks.1.mlp.fc1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "4f5651be4a854ca576d34b2bf5c601bdf504abcfce0c5cda81ceef1d10fcdc48"
+  },
+  "vision_tower.encoder.blocks.1.mlp.fc1.weight": {
+   "shape": [
+    1152,
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "059d86bfc7b35862bd75977f637598e0a45241223e7979d7087a51e389c69c26"
+  },
+  "vision_tower.encoder.blocks.1.norm0.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "b73df78359609219ec0d1f31db69ce317aec8e424e6ccb882c46899db2af0802"
+  },
+  "vision_tower.encoder.blocks.1.norm0.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "f86ae9888480aae9ebed21656800e44ed7a140668f65e8c82da46a38d60bb241"
+  },
+  "vision_tower.encoder.blocks.1.norm1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "741da76337e7f25978edcbd724f810874980b1643b999a120daa819aecb8aef2"
+  },
+  "vision_tower.encoder.blocks.1.norm1.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "5979b8fc983faff9eb1e8e52ed5d6161d286bc142ccaab75dc82d477350dda03"
+  },
+  "vision_tower.encoder.blocks.1.wo.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "d49f83405335b3ec93243ad998efe5bbd9b5d7478c77a683ce41a3befdfb6bd3"
+  },
+  "vision_tower.encoder.blocks.1.wo.weight": {
+   "shape": [
+    1152,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "46d8bea320acfa8f1d0e3f41cccbe46ded5022a7e34c89451070d39ae2152d69"
+  },
+  "vision_tower.encoder.blocks.1.wqkv.bias": {
+   "shape": [
+    3456
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "5ee448daf82e52e36a1a9d3fa6e4c431ba84ba81f3f642b906c411588f3c6d39"
+  },
+  "vision_tower.encoder.blocks.1.wqkv.weight": {
+   "shape": [
+    3456,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "c2b77446e67cb2b1fd559e610b5986f599b7b186bdc1a24464995d239c0e4051"
+  },
+  "vision_tower.encoder.blocks.10.mlp.fc0.bias": {
+   "shape": [
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "f0165976b4f986b512eb865e612aa3a462a9f9c2587f5b833180d4254b0c073f"
+  },
+  "vision_tower.encoder.blocks.10.mlp.fc0.weight": {
+   "shape": [
+    4304,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "b4ebdd9cb220423ce6998d7bec4330cf5e931c2b823cfbe045b3acf4111cf66c"
+  },
+  "vision_tower.encoder.blocks.10.mlp.fc1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "9290b96c176c9c4b230f4100d77eada884f8d488afca91939967775d03f91bae"
+  },
+  "vision_tower.encoder.blocks.10.mlp.fc1.weight": {
+   "shape": [
+    1152,
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "09436ad239601e2a68ff2cf80e640377713e10315301634b333662c51b725f1c"
+  },
+  "vision_tower.encoder.blocks.10.norm0.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "7aa03483aaa05ca6d8d6f1a4fbea65b27ba1099dca0d48869ede500662c66f96"
+  },
+  "vision_tower.encoder.blocks.10.norm0.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "0abf6ccefb793c39fd38ad0dceeb747447fcb8992390b1cea29a7ea6ec65cb55"
+  },
+  "vision_tower.encoder.blocks.10.norm1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "3222f978d0943ad2bfe1e4fbb89a4d2147e5e9054ca5586f0085f5a2e59b0746"
+  },
+  "vision_tower.encoder.blocks.10.norm1.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "0caaf8fa03bc305b770267d8532f9293bbe18294877484dd418ffa119e375505"
+  },
+  "vision_tower.encoder.blocks.10.wo.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "9082c49ddd47a057f1a4f2e24a3684bb6c8c342d3ff7cf65d73eb0c08d679606"
+  },
+  "vision_tower.encoder.blocks.10.wo.weight": {
+   "shape": [
+    1152,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "82114b3ce04b3b5cbefe1033d37fafb8220fe6c588158a2dda511148e7ad9fbd"
+  },
+  "vision_tower.encoder.blocks.10.wqkv.bias": {
+   "shape": [
+    3456
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "2244d01f6b47a4f1a2b83f14e02303e7bc669d4d6610e4c48bb4432c579a7af4"
+  },
+  "vision_tower.encoder.blocks.10.wqkv.weight": {
+   "shape": [
+    3456,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "901d2bbf181f2523df65ae7bbffbe1714c8728427c3dc641c381ee68b4c426c9"
+  },
+  "vision_tower.encoder.blocks.11.mlp.fc0.bias": {
+   "shape": [
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "dfa9f03c3661ae14c00561da86241b6459d159efe505ab4871b494ffea132cac"
+  },
+  "vision_tower.encoder.blocks.11.mlp.fc0.weight": {
+   "shape": [
+    4304,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "ac7f547c93b3187d78f10fe337d6932a591a75078dec16167fbbd06e5773d177"
+  },
+  "vision_tower.encoder.blocks.11.mlp.fc1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "0a8e1581dede7fa53a0b7095805fdc4781e9f63977840709e8aa5071a0be4321"
+  },
+  "vision_tower.encoder.blocks.11.mlp.fc1.weight": {
+   "shape": [
+    1152,
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "be467e30ef69126a76fc201c1abff8097c4cc7910a8166ad368640a440384db7"
+  },
+  "vision_tower.encoder.blocks.11.norm0.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "f81ac5b4dad50f39e8b7d133962c538c3929e48f6b1d668ce0b95d6b5367dfd4"
+  },
+  "vision_tower.encoder.blocks.11.norm0.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "cd9abeccbeeb9fdf05c7c057dc7dd1a2d546fa45d462d13bd117e743da3c5ff3"
+  },
+  "vision_tower.encoder.blocks.11.norm1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "2d1f1e037bb0a52251245cc05cd410d41a00c2ae7f82c5b4ba2ce69f6cdf7ca2"
+  },
+  "vision_tower.encoder.blocks.11.norm1.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "ba71fd9710c8155ff6e2eb2760c772f54d10721b37c792d5d61f40757ce896f0"
+  },
+  "vision_tower.encoder.blocks.11.wo.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "3d998b9cec8e3126e97fef6a39455136ae98d6a401d4cef8d60007dd50ed1c80"
+  },
+  "vision_tower.encoder.blocks.11.wo.weight": {
+   "shape": [
+    1152,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "54d2852e213206def20fdeeac9fbf59c76e4310f925712511a8e533465556353"
+  },
+  "vision_tower.encoder.blocks.11.wqkv.bias": {
+   "shape": [
+    3456
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "2c01155d70bbc28ad347773a345786d1462381a4d86d3c69d4b74ecba2faa301"
+  },
+  "vision_tower.encoder.blocks.11.wqkv.weight": {
+   "shape": [
+    3456,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "d88bc3db88dd9778d60162057d7edb0418ff5a97d44aa07c62d216f27e5c5d0f"
+  },
+  "vision_tower.encoder.blocks.12.mlp.fc0.bias": {
+   "shape": [
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "f00fe6c4fdf047ad83345f6119575964d0cd873321cb2effc7a93fdb3417c75a"
+  },
+  "vision_tower.encoder.blocks.12.mlp.fc0.weight": {
+   "shape": [
+    4304,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "9126d2e83d578010323a316608ce13f6149c884d6c1c7d397c27d3235254c8af"
+  },
+  "vision_tower.encoder.blocks.12.mlp.fc1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "9fdc2b40df0f3881fcdb659928d6f4082d608635f1c8e680228542e06bf63e18"
+  },
+  "vision_tower.encoder.blocks.12.mlp.fc1.weight": {
+   "shape": [
+    1152,
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "093029eb2b884204f9a5593a229fa14990a4739b2d45349c4de898be19807abd"
+  },
+  "vision_tower.encoder.blocks.12.norm0.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "c8aec05f82c172c5b04128b8fb10e8fd01f1685a3922b30745918725371adda7"
+  },
+  "vision_tower.encoder.blocks.12.norm0.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "47f005da5143d809d61b54f39bebad6617d77254e34631824bd1da487c26b8d8"
+  },
+  "vision_tower.encoder.blocks.12.norm1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "7af16280ca227a2547cb9aa6825efc49e405ddcbfdbd00db300cad8fe16ef7b1"
+  },
+  "vision_tower.encoder.blocks.12.norm1.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "1b91788cf682abd214a59bdfe4eb441cc79c3c54eadda2f46e01f8c6db1ee956"
+  },
+  "vision_tower.encoder.blocks.12.wo.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "469140aeeea96044ce820b09261aa3d79f557a993aea4eb9e2abb9004ca911cd"
+  },
+  "vision_tower.encoder.blocks.12.wo.weight": {
+   "shape": [
+    1152,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "b2933eaddc1a7f41ecad075e4ed665ef011803f9249126399042ba90d4a7234f"
+  },
+  "vision_tower.encoder.blocks.12.wqkv.bias": {
+   "shape": [
+    3456
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "903982fd6cbaffb68b13dcc9d042933b721b05fbe0dacf5c84b1c12138a0adda"
+  },
+  "vision_tower.encoder.blocks.12.wqkv.weight": {
+   "shape": [
+    3456,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "5a95be672199244c2205bfd26f989e4ff0a1213b3ad758c8e87eb1cba1fff900"
+  },
+  "vision_tower.encoder.blocks.13.mlp.fc0.bias": {
+   "shape": [
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "2851cbac21d345b66f8527ce1fa0d765dd077952c49c341c2eb7487f5a20ffb7"
+  },
+  "vision_tower.encoder.blocks.13.mlp.fc0.weight": {
+   "shape": [
+    4304,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "c856619c2f7104d1a8f0862cb77ca5b8eaf3aec064bc2ca994d5e184f54763a8"
+  },
+  "vision_tower.encoder.blocks.13.mlp.fc1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "277312cb7050e1e2124bb2fce3874afcedf1f5d4fa969926480c0fe5e1343cf2"
+  },
+  "vision_tower.encoder.blocks.13.mlp.fc1.weight": {
+   "shape": [
+    1152,
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "26e704e9536b6cd1c0c03f2c9b12d75cb3c9552f60d981a53835ffc030832623"
+  },
+  "vision_tower.encoder.blocks.13.norm0.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "3de12d7d0c4d5282e2c7dcd0e2248a07e05256509cb0c6d39375a586f48278f7"
+  },
+  "vision_tower.encoder.blocks.13.norm0.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "702039ffa9d7ff7167fe8997ec4c5978fab42e19a376f448c78b33bd10dde336"
+  },
+  "vision_tower.encoder.blocks.13.norm1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "0b6a825cac9d31166b466894ced6cc7f1aed141b0ef7fc613d62b3d97bfadf00"
+  },
+  "vision_tower.encoder.blocks.13.norm1.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "2c825ec8b5568a72cfc023ed3ab5c53b55dd0252fa4d0125f5da2ca64d16110e"
+  },
+  "vision_tower.encoder.blocks.13.wo.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "559051e0532c60ab5fb2600aba1cda1f2dc24d09c623843120576cf57e6091f4"
+  },
+  "vision_tower.encoder.blocks.13.wo.weight": {
+   "shape": [
+    1152,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "6ef120c0ce2180c3bc2921a5d724e69febc0541fcf662e6980b817d0a2303ac9"
+  },
+  "vision_tower.encoder.blocks.13.wqkv.bias": {
+   "shape": [
+    3456
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "53ac16484c0cb053f54be5ce61147daec140b6d79e73a3bb0027a2ae84d11225"
+  },
+  "vision_tower.encoder.blocks.13.wqkv.weight": {
+   "shape": [
+    3456,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "1778c24b6f9370a7e51e5b44228200b1e6fc5b16bbc3ac9c7f395488e2d8d67b"
+  },
+  "vision_tower.encoder.blocks.14.mlp.fc0.bias": {
+   "shape": [
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "c902a7a02ccbc0f63c93854fe6cf6171665c6a9380e41128b7c0c7cba3c1caa3"
+  },
+  "vision_tower.encoder.blocks.14.mlp.fc0.weight": {
+   "shape": [
+    4304,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "c66dec96109471f47171532e5c7282bd3d8882827da5c1da4b5f6ca5784f2e91"
+  },
+  "vision_tower.encoder.blocks.14.mlp.fc1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "0a1a031ddf0a11b8e991f32beca45d5cc636f631c4f57e231cd45cef52f4f226"
+  },
+  "vision_tower.encoder.blocks.14.mlp.fc1.weight": {
+   "shape": [
+    1152,
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "96bc4ee2c2c1049f3dd65aa0bef3cc7a311a15b75f92cd7e12bab8b816b7e002"
+  },
+  "vision_tower.encoder.blocks.14.norm0.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "e42608b46983498972aac961ef84696fe07b60d9ac71ba1757ce9498a63c4859"
+  },
+  "vision_tower.encoder.blocks.14.norm0.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "47bdbe169779359939ee76a3248d190777a91e949eae788043668305cd8797e1"
+  },
+  "vision_tower.encoder.blocks.14.norm1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "ad4c30fcfc3d0960d442d72d97e5fbb9d6d5d6c0a93e5529a003b955515a62e2"
+  },
+  "vision_tower.encoder.blocks.14.norm1.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "fbecf43f34535b3d21a75f35c193d222420d5216fce18f88aec10c26b9ddbdf7"
+  },
+  "vision_tower.encoder.blocks.14.wo.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "0b1dd1d384a38c3074c66cbee81c8153ca2465909686e8db3bd578f76be2afae"
+  },
+  "vision_tower.encoder.blocks.14.wo.weight": {
+   "shape": [
+    1152,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "4a9eeda5121d00afe548107d99b4f3207d1a5c1efca8fe94c94a027033b06b31"
+  },
+  "vision_tower.encoder.blocks.14.wqkv.bias": {
+   "shape": [
+    3456
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "fa59a0ea31c0de43358f6e7504ac78e4000a9ba76c0cc8ad0ea69b3c420cb387"
+  },
+  "vision_tower.encoder.blocks.14.wqkv.weight": {
+   "shape": [
+    3456,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "3bc7e0d85f936ab928c6104ec51e3de1dd1bb6e4da75a2418b46899f16395026"
+  },
+  "vision_tower.encoder.blocks.15.mlp.fc0.bias": {
+   "shape": [
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "657e8428b8e7c580bbf69a6dbd80176c2d8f41b283494e2de434edb6ce50eec3"
+  },
+  "vision_tower.encoder.blocks.15.mlp.fc0.weight": {
+   "shape": [
+    4304,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "16de638960e8d88d187dc6c75fc9eab3cd7092f7017d98ab969b6e18c78d93e6"
+  },
+  "vision_tower.encoder.blocks.15.mlp.fc1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "5e5846cfe37e78c502438308faba9a82e0d61996965e0d9ee444df936e44f669"
+  },
+  "vision_tower.encoder.blocks.15.mlp.fc1.weight": {
+   "shape": [
+    1152,
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "663ea4a273ab7fbc01211d3b64ebb052d50758166ab6ae65877db15a1ccdd395"
+  },
+  "vision_tower.encoder.blocks.15.norm0.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "60aad2bdd738fb00b3c171ae831f55c87ea855afeeaa43c72a3a576989ab05e8"
+  },
+  "vision_tower.encoder.blocks.15.norm0.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "872ce4a6dec8f89d5f1e256d5ff5fcc60394b212dae54a5d7a4fcf51203af29f"
+  },
+  "vision_tower.encoder.blocks.15.norm1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "2c089424dba23a3370d5c3bb6f057edc4409718e9bfb181441e3e242ac84b44f"
+  },
+  "vision_tower.encoder.blocks.15.norm1.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "8e537bad429171e88a67160fbd19b236a9c1c2328f06383701f3eb1276d34014"
+  },
+  "vision_tower.encoder.blocks.15.wo.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "e65d6482a285359747494a71860518d9655633f05ade027823a5b74cc94c3203"
+  },
+  "vision_tower.encoder.blocks.15.wo.weight": {
+   "shape": [
+    1152,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "24ec7fcecdd45bc5c96beffc190ec718630ac33b22e7c02bfc930609adb1e2f1"
+  },
+  "vision_tower.encoder.blocks.15.wqkv.bias": {
+   "shape": [
+    3456
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "7a2a63e85f19ca3624be8fbdb6f4d13feffaab4a5a244b0f8c9bdf833e6b8c52"
+  },
+  "vision_tower.encoder.blocks.15.wqkv.weight": {
+   "shape": [
+    3456,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "a2fab48c60a0a40f01684041cd656b7b1f9240c1a8a65164bcd429e9ea72538d"
+  },
+  "vision_tower.encoder.blocks.16.mlp.fc0.bias": {
+   "shape": [
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "fe7bb22a48680f5c859551dde6538971c22b21a341a4f2b28022799fa6d762b8"
+  },
+  "vision_tower.encoder.blocks.16.mlp.fc0.weight": {
+   "shape": [
+    4304,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "6b4d15e4bedb0fcf024e0a502049cf3958ac70e926e7f362db6baa0ba35e46e1"
+  },
+  "vision_tower.encoder.blocks.16.mlp.fc1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "821f4a956b30785e80b5ffe3c368cf9386724ebc18e485ee172c9aaba23cb2a4"
+  },
+  "vision_tower.encoder.blocks.16.mlp.fc1.weight": {
+   "shape": [
+    1152,
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "adfb212660613c439f238d9f3a76b6bc19cc4618d15a54fc8b490b858bb5f252"
+  },
+  "vision_tower.encoder.blocks.16.norm0.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "9813d6866559e757c824deaa789fab1c4028d21f2f53f5b7cfed187299896424"
+  },
+  "vision_tower.encoder.blocks.16.norm0.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "7a12c8724fb906ed11215f824e7d2077c0817130e2e016bddbc95daf9a7024a9"
+  },
+  "vision_tower.encoder.blocks.16.norm1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "7fa0f70800ec62846a77eb677ec17a17abdf00b55490517188c406182d42be6b"
+  },
+  "vision_tower.encoder.blocks.16.norm1.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "44f4730bde2927def893fb765e07491a461a0c9c2cbcb5f01a966872b04eacd6"
+  },
+  "vision_tower.encoder.blocks.16.wo.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "6253deaaa3ecef0bc04319f848fbead7b6e9d14cff39a5dac8289140d59ef502"
+  },
+  "vision_tower.encoder.blocks.16.wo.weight": {
+   "shape": [
+    1152,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "206d3e4f7db95f5026baf9d4abc248fa52852a4d56ffd2821b48300c70cdeb33"
+  },
+  "vision_tower.encoder.blocks.16.wqkv.bias": {
+   "shape": [
+    3456
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "7896b2bcf63ae908549be579e98e26e51bbe7686e64b9942fa1180e69e0fa330"
+  },
+  "vision_tower.encoder.blocks.16.wqkv.weight": {
+   "shape": [
+    3456,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "0f99202894a27fb3e7ddb23514db44936caff60e08cb31b38e84022aaae6b7be"
+  },
+  "vision_tower.encoder.blocks.17.mlp.fc0.bias": {
+   "shape": [
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "0fddf080a6709f51176db5559681cd35b3a8429417a3ff8d1243e905905aae1b"
+  },
+  "vision_tower.encoder.blocks.17.mlp.fc0.weight": {
+   "shape": [
+    4304,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "fb4b7541a60e27514bffb46897c74655d33087417e7c7f9230ef163e83ab2ffc"
+  },
+  "vision_tower.encoder.blocks.17.mlp.fc1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "39616d32f6e6b9302324d76732b36e9c3cebb33f94de5e76661005fe1b066e96"
+  },
+  "vision_tower.encoder.blocks.17.mlp.fc1.weight": {
+   "shape": [
+    1152,
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "440a6ab2d1008b8d3530f88bc0a59ea8191526894fc8fb90f96a0fcf683c4730"
+  },
+  "vision_tower.encoder.blocks.17.norm0.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "92f7299de4f63df9de4e99e17375f19860e77100c7de7990fdfc06d1fe0614d3"
+  },
+  "vision_tower.encoder.blocks.17.norm0.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "ed27c420664de1d3715d229057d6b2470765a1dc17f1e9a9a1dcbe6c2efb3d56"
+  },
+  "vision_tower.encoder.blocks.17.norm1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "bdbb484b8b67d72b84f6ad816f0ebc65232b020312fc90e9dcbea80c058f80fe"
+  },
+  "vision_tower.encoder.blocks.17.norm1.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "632cf0d247fff35cb51af36168749d7bae8b9b9667ed0eba3d376f89ebf75a33"
+  },
+  "vision_tower.encoder.blocks.17.wo.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "20017486c653e5f2a90ab36b23fe0fa7b9744ef1db99085288899b54e5e720a6"
+  },
+  "vision_tower.encoder.blocks.17.wo.weight": {
+   "shape": [
+    1152,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "73f9145c344bb2778c975cddbb1741f6ba909ce10d115f0289c9c2a9491c78af"
+  },
+  "vision_tower.encoder.blocks.17.wqkv.bias": {
+   "shape": [
+    3456
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "0b054ca0d0e29693012f9b26643a091cd23d7a76f6172c4e4b1838e8e86ec648"
+  },
+  "vision_tower.encoder.blocks.17.wqkv.weight": {
+   "shape": [
+    3456,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "90121e9547589d06422a1ad9dfabb21d1c51be8e279f9ab414c0ddd32e0c3c6c"
+  },
+  "vision_tower.encoder.blocks.18.mlp.fc0.bias": {
+   "shape": [
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "18b7e1e12312d6a71ef5db9efc2a8a74047a8160d1e88182ac80a13f494ba22f"
+  },
+  "vision_tower.encoder.blocks.18.mlp.fc0.weight": {
+   "shape": [
+    4304,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "846d03d66091478219a1493f92e76554261a8f04b15c928a4333a419b5c33812"
+  },
+  "vision_tower.encoder.blocks.18.mlp.fc1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "5016943e3d38af76d2f0528ff13560c5120284146fc7abe8b943ac21d7130646"
+  },
+  "vision_tower.encoder.blocks.18.mlp.fc1.weight": {
+   "shape": [
+    1152,
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "d05d11aef482c2a54375c36add613be4f07058c17b7dc19e1da2d840f1c3ea2a"
+  },
+  "vision_tower.encoder.blocks.18.norm0.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "d7c0673ef0cb242c20e2644deaf8d1c570665489f721cb037f9fb188054547d5"
+  },
+  "vision_tower.encoder.blocks.18.norm0.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "ca2eb7774e195b6e3079908d81f94582dc136331089d1b143bab67290d4b1419"
+  },
+  "vision_tower.encoder.blocks.18.norm1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "032fe45872f6d8c421ec998a7b6533986f1ceafd9b6c266e0658f79be8eaa74b"
+  },
+  "vision_tower.encoder.blocks.18.norm1.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "cb6b1fb64c1f7c5c4a55c048f53fd7b4707acc6f75cc8ac9a34edf6289025ee8"
+  },
+  "vision_tower.encoder.blocks.18.wo.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "d36a37f4fdd4fb4f9fe1767855030976f280f537d2c0a1dd87bca73c521f1555"
+  },
+  "vision_tower.encoder.blocks.18.wo.weight": {
+   "shape": [
+    1152,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "3b0c96a712c2459f35819ee0e98d419631edf95d1a545788f9b67c1dfec7f7c2"
+  },
+  "vision_tower.encoder.blocks.18.wqkv.bias": {
+   "shape": [
+    3456
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "b6468baeed60df44e8188378ff7ac3dd544369b097c163f43cb03a7a3c3a983d"
+  },
+  "vision_tower.encoder.blocks.18.wqkv.weight": {
+   "shape": [
+    3456,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "fe911cd7f1f50d8494d21c38ce722650c4fdeedf8239339b40f96500a701f923"
+  },
+  "vision_tower.encoder.blocks.19.mlp.fc0.bias": {
+   "shape": [
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "4ce71fab813820fa1ba384ac3e0a934bcfe297076dccb3e2494e1753b42adb72"
+  },
+  "vision_tower.encoder.blocks.19.mlp.fc0.weight": {
+   "shape": [
+    4304,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "7f84d782f5f1b5b51ed9ceb556cfbdde9b2b5d9c1756db444d94b212fbe15692"
+  },
+  "vision_tower.encoder.blocks.19.mlp.fc1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "1ca031062fffcc7968c0328971b7c949210cfd82336b186a7bc6828c82b26d52"
+  },
+  "vision_tower.encoder.blocks.19.mlp.fc1.weight": {
+   "shape": [
+    1152,
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "799251699239c37f3faed8ab06a05a862f2c2396f8496fd1ab47d9657f78b7cd"
+  },
+  "vision_tower.encoder.blocks.19.norm0.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "2c40274c22662a3b27619311e09af7c115285142f044bb2cdf77b81b3db7d75a"
+  },
+  "vision_tower.encoder.blocks.19.norm0.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "71c804fec6abb7389d19bff8323225f56d346bde6a5d2500645d562ce2b593ac"
+  },
+  "vision_tower.encoder.blocks.19.norm1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "e222bc3a64ddb396b11874cd2469507dd8ffb8d73c560fc8d1e74d19dba7bff9"
+  },
+  "vision_tower.encoder.blocks.19.norm1.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "77aa5ebdff61ac8ae6a87fd4b59c693029d04a5e41edc7ffec2f4b5dbb5a97f3"
+  },
+  "vision_tower.encoder.blocks.19.wo.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "f487cbcf8bc99f43fc7d40338f00ce7ed4b678a3309627e777d700f592789e41"
+  },
+  "vision_tower.encoder.blocks.19.wo.weight": {
+   "shape": [
+    1152,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "9ed04ea5ee2c36088738f4dde50e11c6966968403ab4f20220815c92365b08c4"
+  },
+  "vision_tower.encoder.blocks.19.wqkv.bias": {
+   "shape": [
+    3456
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "5ef4117b36778223dfaa333f4677a4d8bb6afdd97fbac5aa093bea4c4dbbc7cd"
+  },
+  "vision_tower.encoder.blocks.19.wqkv.weight": {
+   "shape": [
+    3456,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "bd15d01f8967f4a3237562a56cedbbb60614c092f3360faf34328e01fe5fc5fd"
+  },
+  "vision_tower.encoder.blocks.2.mlp.fc0.bias": {
+   "shape": [
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "dfafa387bbff132db8732e0adaa35ac89f6210192866f78a3947e869381a112a"
+  },
+  "vision_tower.encoder.blocks.2.mlp.fc0.weight": {
+   "shape": [
+    4304,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "cefa5cffebad4a0f58e74eca79b9a4612f7403a52fd1bc84aac02b4f99f8aea1"
+  },
+  "vision_tower.encoder.blocks.2.mlp.fc1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "c14e37335d4fca93e5ea112ff79e4439e6b2402d76ab33cbc4af30fa99d23801"
+  },
+  "vision_tower.encoder.blocks.2.mlp.fc1.weight": {
+   "shape": [
+    1152,
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "634d54f87f220168ef4cb41d7aff3da7eba4aa8590b6b22e8d5a2cefff2d931f"
+  },
+  "vision_tower.encoder.blocks.2.norm0.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "e5355fc0a27a2c7977a012efce26b2a595f928ed1e8f9342a1f1311d2a181ee4"
+  },
+  "vision_tower.encoder.blocks.2.norm0.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "43996b820e4043725531079b29b6cd43b23e0bfd9711a4aac4cf1e9a1c432c8b"
+  },
+  "vision_tower.encoder.blocks.2.norm1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "d4958f60a5bf1a745f58125054dad34db56b4bbbec28326494b44013df9616e6"
+  },
+  "vision_tower.encoder.blocks.2.norm1.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "0fed2912f39374ef5f6d467cc2a201dcc21c4df567ad66a78341e6a344ef4682"
+  },
+  "vision_tower.encoder.blocks.2.wo.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "c5338bd75372678c16a641a7bb758fa752a03f5a8f50ac635f075da5a51d282b"
+  },
+  "vision_tower.encoder.blocks.2.wo.weight": {
+   "shape": [
+    1152,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "8ccece8d8a4bae37385f62f8fc533e5763b9ccc40df5fda980d6e667aa847ff6"
+  },
+  "vision_tower.encoder.blocks.2.wqkv.bias": {
+   "shape": [
+    3456
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "30d1d02776be87d1c61cbed28954af90a57b6106e1b46ebdac28a8651160a03d"
+  },
+  "vision_tower.encoder.blocks.2.wqkv.weight": {
+   "shape": [
+    3456,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "206ee607294b2c2f9ae7f3184d8303b52d50fb2857f4fc0a6e524feed31bb0b2"
+  },
+  "vision_tower.encoder.blocks.20.mlp.fc0.bias": {
+   "shape": [
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "06c44fd236ff440d68c9f50a9ebede5527c4cfa27e71bc7d9ad9cce122331e5a"
+  },
+  "vision_tower.encoder.blocks.20.mlp.fc0.weight": {
+   "shape": [
+    4304,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "cf6186378506bb20c263cfc8e92d5a6d2dea67ed84a8894b38cc5eaa4e292691"
+  },
+  "vision_tower.encoder.blocks.20.mlp.fc1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "f95c73f6f8c6a16977f7f773a6dc0992abad2c34d7ddf2e8dcdd039f03e433ff"
+  },
+  "vision_tower.encoder.blocks.20.mlp.fc1.weight": {
+   "shape": [
+    1152,
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "46964c579a507d5c2063c262123dcc6dda7b0d84a40deead5fcb792c56c76d0c"
+  },
+  "vision_tower.encoder.blocks.20.norm0.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "9f7c81910ecc2a5df798a8833feeecb86c395af38cdb5bf0426e318efbeab9a5"
+  },
+  "vision_tower.encoder.blocks.20.norm0.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "db3b8715fa96ed54a9baec4d462d0a1220bc31ec3e708003c071009fb018aafb"
+  },
+  "vision_tower.encoder.blocks.20.norm1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "7bf13aa2a716efd3850138a339c18c8fa48ffc5f54435dd7a1948d8993a6d742"
+  },
+  "vision_tower.encoder.blocks.20.norm1.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "e108f578b684607a652b0e96f34e45f5e9ba0c943076e4827b1b7b6dfe662c05"
+  },
+  "vision_tower.encoder.blocks.20.wo.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "b9a76ca42291b22d0e450023ff21de67df029820b8ff6c6a041589490ca2d609"
+  },
+  "vision_tower.encoder.blocks.20.wo.weight": {
+   "shape": [
+    1152,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "b38f73c4437ca3891610cced6e7327f3b991a8bbe191415979f0ba82d28b2ba8"
+  },
+  "vision_tower.encoder.blocks.20.wqkv.bias": {
+   "shape": [
+    3456
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "8742b3f0c07fd319e6ecac396ca939cd1d452afb53e7b69596288bd8d1296e95"
+  },
+  "vision_tower.encoder.blocks.20.wqkv.weight": {
+   "shape": [
+    3456,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "8a8f3c7986e8a9a95d3a9a2e8bddcd079abe07c7df57191fc2c610c3380f5370"
+  },
+  "vision_tower.encoder.blocks.21.mlp.fc0.bias": {
+   "shape": [
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "46dd4a5c7d9004f1efd774fa5d25081c1bc2c6042add9d2ccf0a7f618e53bb1e"
+  },
+  "vision_tower.encoder.blocks.21.mlp.fc0.weight": {
+   "shape": [
+    4304,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "b6d9eabb5ddb316ab0ebc11ce065ae8db6a238e76d6a690d301164736857cf09"
+  },
+  "vision_tower.encoder.blocks.21.mlp.fc1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "598cd666d1df0a951360439fa162857abfaaa499789fbde7237081bd0e12d0ab"
+  },
+  "vision_tower.encoder.blocks.21.mlp.fc1.weight": {
+   "shape": [
+    1152,
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "d2cdd4f047d77b5bcf6a4265ddaee48e18d592b1296cba682419d4eb4df3010c"
+  },
+  "vision_tower.encoder.blocks.21.norm0.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "0c7380cc571d66dc9a8b870b956f356450a0bb11152a72551b5234f9bd4b9c1d"
+  },
+  "vision_tower.encoder.blocks.21.norm0.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "3ad49bab2d2e15d4032c04289f4c66dd2c609b9e11238f7111c6e92093effc41"
+  },
+  "vision_tower.encoder.blocks.21.norm1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "88333d9d8759e14df1d48edc8c096e77cb1a503ee83a82d5376e3e49afca8caf"
+  },
+  "vision_tower.encoder.blocks.21.norm1.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "de300fb7adecf4a761b89938de280a94a273f06c0ed6c7fb10d06838d7702a79"
+  },
+  "vision_tower.encoder.blocks.21.wo.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "a3a93a22bffe8f1723f9b3cd2192c671641b1605b74604b5b9a56ad0924f7d6b"
+  },
+  "vision_tower.encoder.blocks.21.wo.weight": {
+   "shape": [
+    1152,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "692a60fafec097b67cfec0ef76a1d245ffe8c5e7bff5bcbad5570a795f9e6b1c"
+  },
+  "vision_tower.encoder.blocks.21.wqkv.bias": {
+   "shape": [
+    3456
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "6875d41739da70ce193153bc6b1284a936f27babe0a1bfaa17330bf43655bd63"
+  },
+  "vision_tower.encoder.blocks.21.wqkv.weight": {
+   "shape": [
+    3456,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "8a0772c1337be2c3e7c8628d229fad9e0e71226f42438c537b2e83df4cb7fe42"
+  },
+  "vision_tower.encoder.blocks.22.mlp.fc0.bias": {
+   "shape": [
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "2e6f536d1c8cc00f73dde7709b5c536056f8d0057b620d0e9b10e120d4330a2f"
+  },
+  "vision_tower.encoder.blocks.22.mlp.fc0.weight": {
+   "shape": [
+    4304,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "8c1b975ed9e70ba6b571d552e18f77f88011b11acfa5996b19a2124778fe612a"
+  },
+  "vision_tower.encoder.blocks.22.mlp.fc1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "3abc1ee6fe203fc87256243a1c174d85798bc0eda8bf0a9c68e5d6059b06ec82"
+  },
+  "vision_tower.encoder.blocks.22.mlp.fc1.weight": {
+   "shape": [
+    1152,
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "e9a79bb81c7f5240035c70ef46a21547a4ebcd9dce112d1c3592034592ce0b2f"
+  },
+  "vision_tower.encoder.blocks.22.norm0.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "ea8efafa06714b98f7ba1b05965f1285dec2ba5476997522f76d26a3209b3c31"
+  },
+  "vision_tower.encoder.blocks.22.norm0.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "ddd374528be2ee1bad20e672e81504f96e2ea947b052d655c275aba162d7e3db"
+  },
+  "vision_tower.encoder.blocks.22.norm1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "1569ebcbba80a07f2fd6904d5b7f087210e830b757888f4a5f4f0d1f54a14007"
+  },
+  "vision_tower.encoder.blocks.22.norm1.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "ed24540ce88277d23161b038533a282d266bdacef63df7c454c679880e778043"
+  },
+  "vision_tower.encoder.blocks.22.wo.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "46f961e2a2dff31376ca06c73a9ec3df236bf20b9b9532068dc5e2a2d0e69df6"
+  },
+  "vision_tower.encoder.blocks.22.wo.weight": {
+   "shape": [
+    1152,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "b543a0e63c086899170470cb2cf8644039a6bdb73a22296230bd003b28361f5f"
+  },
+  "vision_tower.encoder.blocks.22.wqkv.bias": {
+   "shape": [
+    3456
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "b1d5b698ffb6ac92bf1e6fa37afc1149c1c6086fdc5e5a277a4c59f3c84c01c8"
+  },
+  "vision_tower.encoder.blocks.22.wqkv.weight": {
+   "shape": [
+    3456,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "723a81e06812f0e9cc9cf5b87b24c86f3f29543f440fae17032fcdc30f519b5a"
+  },
+  "vision_tower.encoder.blocks.23.mlp.fc0.bias": {
+   "shape": [
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "5b18181566168d64e4f1ad0b80f24244737ce2668e295213ea9213f657f2cb08"
+  },
+  "vision_tower.encoder.blocks.23.mlp.fc0.weight": {
+   "shape": [
+    4304,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "b28636d23ca62a045b252d0949d075a285e5d1ede30dd40e288b00fe2625201f"
+  },
+  "vision_tower.encoder.blocks.23.mlp.fc1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "4d94070987eb57c7351a2fba1d1ad75a5d2b486328fafc849cd2322a7df60313"
+  },
+  "vision_tower.encoder.blocks.23.mlp.fc1.weight": {
+   "shape": [
+    1152,
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "a0cad3d3040a7811c053803869e0ca87d86868da841066c2cc1eaa170aeafa54"
+  },
+  "vision_tower.encoder.blocks.23.norm0.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "d42db6f81edb0aab6ef59544083725fb4b8d539b6134d8358e229b29433ecc37"
+  },
+  "vision_tower.encoder.blocks.23.norm0.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "d6039d88e6628fed1b315291c1e454a70467647948fbe65f25d231855d93bd4f"
+  },
+  "vision_tower.encoder.blocks.23.norm1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "8cb13024d01bc9fb6a8391d405961c8c3e7c743c999450584a2a88ea840ec4fb"
+  },
+  "vision_tower.encoder.blocks.23.norm1.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "54d3b79221c08380337721a94bf648543418af13bb58b9e98d7873575bd30cc0"
+  },
+  "vision_tower.encoder.blocks.23.wo.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "096db04eab019cb8b0a775e5d7d2e5ca213037936f72bdd414b3c0f36332d73e"
+  },
+  "vision_tower.encoder.blocks.23.wo.weight": {
+   "shape": [
+    1152,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "9b74fca8d89254d7b47a55070d2fc3ba9e0215efd542ca7f7bc069dcaab7884a"
+  },
+  "vision_tower.encoder.blocks.23.wqkv.bias": {
+   "shape": [
+    3456
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "1d8519512aa5607f8c7fd0011307bd1247a7e15198f16a719d5dac74153d2b86"
+  },
+  "vision_tower.encoder.blocks.23.wqkv.weight": {
+   "shape": [
+    3456,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "2e1da99bb505b66eff49a602cfecd5ee418347a77c27cd97a7fa2cd688753015"
+  },
+  "vision_tower.encoder.blocks.24.mlp.fc0.bias": {
+   "shape": [
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "ef758888e691070f297654e9b263a7720bca5ce44879a23e1e2fc0faa4ea56b5"
+  },
+  "vision_tower.encoder.blocks.24.mlp.fc0.weight": {
+   "shape": [
+    4304,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "0bd4c312c8ac4988cd0f3341947fc4b9fb85be40dc2159236cb193f6f182f5e9"
+  },
+  "vision_tower.encoder.blocks.24.mlp.fc1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "26b11b06a3053e482f090e58e5807cc6b14a24f7b4158a24451046cdb7e4fe14"
+  },
+  "vision_tower.encoder.blocks.24.mlp.fc1.weight": {
+   "shape": [
+    1152,
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "e4231cc3e973e2d2892974492676d407e61cfabe6e90bbd5f7e54a6c1239b033"
+  },
+  "vision_tower.encoder.blocks.24.norm0.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "4d19c20b1d003daf57e306a0968e4024fad18d35487222b75e5b1325d2012490"
+  },
+  "vision_tower.encoder.blocks.24.norm0.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "b5944f0a1550081dc78079a3b9c45d0b081c6105fde28262462ce5097fd8c335"
+  },
+  "vision_tower.encoder.blocks.24.norm1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "51ff5e16b1fe9dc74ece7832e6b969abd87ea4d8b49e3b64f73d01fcadbcd73b"
+  },
+  "vision_tower.encoder.blocks.24.norm1.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "f89c61f1a48984ae31fbdaf21fe3f4da2e082444007d14f90d4112dfa17f757b"
+  },
+  "vision_tower.encoder.blocks.24.wo.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "d93e6f1fa01fd5ce5e7a173ae7108d47fffd4d00dc2f2bb51e929b6d27960b98"
+  },
+  "vision_tower.encoder.blocks.24.wo.weight": {
+   "shape": [
+    1152,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "79a98659965b4f8aa2d663e187dd866e8b98d7718b5f0a530d4e745820861154"
+  },
+  "vision_tower.encoder.blocks.24.wqkv.bias": {
+   "shape": [
+    3456
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "b7cce7fef001f8538d49a031679077501760a4dc5095cec28d016a3eac04c175"
+  },
+  "vision_tower.encoder.blocks.24.wqkv.weight": {
+   "shape": [
+    3456,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "960e3dfec0d65c113211208e1066516bd8916f037e44d3f4ad64aff2ba97d60f"
+  },
+  "vision_tower.encoder.blocks.25.mlp.fc0.bias": {
+   "shape": [
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "6646d3697b2bcc8790bba4a5b688108ba1baf89b7acaa66edb0239a3e5b95b06"
+  },
+  "vision_tower.encoder.blocks.25.mlp.fc0.weight": {
+   "shape": [
+    4304,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "9357a876590e161f4582e2de8c539dc2044abc3cc04bc248c190a7070bb38fa7"
+  },
+  "vision_tower.encoder.blocks.25.mlp.fc1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "5585e7aee02429083f807174e14ede7455ba4026ad9386691409dc58bdfb8fe7"
+  },
+  "vision_tower.encoder.blocks.25.mlp.fc1.weight": {
+   "shape": [
+    1152,
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "092cab4295826a76e4ed8c03fcf863e9a114895cca25e89e0389599868a59de9"
+  },
+  "vision_tower.encoder.blocks.25.norm0.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "855df3bf968287e6d11003e820eb08408366aa03f5e6eccd3311e90470fc2cc5"
+  },
+  "vision_tower.encoder.blocks.25.norm0.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "65323549c465e6895d1ebe3550f222cd9cb0484ee21d64ade02ba3961c4246b2"
+  },
+  "vision_tower.encoder.blocks.25.norm1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "8193404a3bdb7cab844c2e6a4d4b9af9d0610a87641289c5e8a0173afab68901"
+  },
+  "vision_tower.encoder.blocks.25.norm1.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "63c4333f2488820e9e02b7935a9079cbcfeded3b8e33e1ba0f14ae94bea2106b"
+  },
+  "vision_tower.encoder.blocks.25.wo.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "9aaba4160e3dbf38fa889e48cc7cfc90aa7e703893814288d4449b4d9c045ae0"
+  },
+  "vision_tower.encoder.blocks.25.wo.weight": {
+   "shape": [
+    1152,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "c9e95bacd6ad7eb2b70e512a9acba9e871a8b48251ad0df0bcb896c585879b47"
+  },
+  "vision_tower.encoder.blocks.25.wqkv.bias": {
+   "shape": [
+    3456
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "8fc8cf6fbde6aad85d7f89f903294e3a90612a8e090f216e10cded786ababf5a"
+  },
+  "vision_tower.encoder.blocks.25.wqkv.weight": {
+   "shape": [
+    3456,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "07ae647154105403e5facf56540ee257ba86863c2e548cdd418ea6ee2b47e2a6"
+  },
+  "vision_tower.encoder.blocks.26.mlp.fc0.bias": {
+   "shape": [
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "991d92907e9c2eff0090bdf08f9cf5fc7f581fd24367e348186650d1bd8de5e4"
+  },
+  "vision_tower.encoder.blocks.26.mlp.fc0.weight": {
+   "shape": [
+    4304,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "fd2d2f6ebba378a1f89258ef4ac7731bb1f1281f26caf248d8042044110797d6"
+  },
+  "vision_tower.encoder.blocks.26.mlp.fc1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "bbcb71e92712bc1e7161dd630caf09891a610d6c116a0b4cb92ed0d878fa7be7"
+  },
+  "vision_tower.encoder.blocks.26.mlp.fc1.weight": {
+   "shape": [
+    1152,
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "fc96ce05615148295e691a310a80fe5942ee271dc24c5db24f2411b9dc7386ee"
+  },
+  "vision_tower.encoder.blocks.26.norm0.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "55c4642bd5ecff2631311080aa7ca11790628f021083edcfdc717d3833b1209e"
+  },
+  "vision_tower.encoder.blocks.26.norm0.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "0077178e49a32b0183528b69362aff88512d94ab5545ebe1ffe932617b064764"
+  },
+  "vision_tower.encoder.blocks.26.norm1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "ae23459fa0c54ac8ccd0f4dc2c9a79aa10619b9aebf4b89e8caebe1c7842d8f8"
+  },
+  "vision_tower.encoder.blocks.26.norm1.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "e8ae8a154f744911cc8ea01d0c47d04e761f852f4d1fed762a2e2f279139b2f7"
+  },
+  "vision_tower.encoder.blocks.26.wo.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "6d82a803b58d873dba8312d3d11fb2a3b11882a9721c87e572bcd6dbdaeed0c8"
+  },
+  "vision_tower.encoder.blocks.26.wo.weight": {
+   "shape": [
+    1152,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "8d9fe9de55534b5c4cf89390c61fd58e9a1d46d3853b93d9797769cde0893e73"
+  },
+  "vision_tower.encoder.blocks.26.wqkv.bias": {
+   "shape": [
+    3456
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "80f7c91f624f293df7f57ea3f48669b05b86e588eeaa5fc6e22f827e9c89843f"
+  },
+  "vision_tower.encoder.blocks.26.wqkv.weight": {
+   "shape": [
+    3456,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "a9c5ae89afbe3a739ba2b064471e6ed26deaea7d8b0e5899c9ba3193c286a671"
+  },
+  "vision_tower.encoder.blocks.3.mlp.fc0.bias": {
+   "shape": [
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "cda4e6059a61d9e4bb52e08e00865c1fc1833e71f93c016287c0e95bb004df25"
+  },
+  "vision_tower.encoder.blocks.3.mlp.fc0.weight": {
+   "shape": [
+    4304,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "52f789a80b6dd063a946b139e70c3b1e4300170f051e16c3cde7525cd5b22d8e"
+  },
+  "vision_tower.encoder.blocks.3.mlp.fc1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "f8ee47fb61151f364626071dae30f6435506e03f7a68e8e7c38cd207e5a40413"
+  },
+  "vision_tower.encoder.blocks.3.mlp.fc1.weight": {
+   "shape": [
+    1152,
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "09f500c3de2131bf1097e6c45134a4e8d43874ada71a82b044e811fe5ae1b41a"
+  },
+  "vision_tower.encoder.blocks.3.norm0.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "322532fad6c8eec3aba415171338fc0c34e638def7697acb811db81cbebb3cd4"
+  },
+  "vision_tower.encoder.blocks.3.norm0.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "86b3bcf0143e9268ca553c65dfc4aef41edc7d1ee5fe801032967fec294d196c"
+  },
+  "vision_tower.encoder.blocks.3.norm1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "283fc4bccd939a8c6e21a7177690c48c837b2691c9f4a90f573d9b59e97d35d8"
+  },
+  "vision_tower.encoder.blocks.3.norm1.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "d954d57a7218f98aac2c887e86e06d6d6f22a4cfe8accb440ddfbc6fc9031e5b"
+  },
+  "vision_tower.encoder.blocks.3.wo.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "41d38435570fc5559eb004f299383c24ca8ac50d1e78e0610e6afe5a7b3b8157"
+  },
+  "vision_tower.encoder.blocks.3.wo.weight": {
+   "shape": [
+    1152,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "4b87207954a71b356d39997edb7e4d89788ccb2850f3c94791905d2eb2130d13"
+  },
+  "vision_tower.encoder.blocks.3.wqkv.bias": {
+   "shape": [
+    3456
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "17d2953177258965d3da09e94f09710bc5771b76555f5045dc94eefc081434bc"
+  },
+  "vision_tower.encoder.blocks.3.wqkv.weight": {
+   "shape": [
+    3456,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "c24cac876a16564778d92cbee9f70789cb71649b809f64c239a3a40f0ef1c0cc"
+  },
+  "vision_tower.encoder.blocks.4.mlp.fc0.bias": {
+   "shape": [
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "41ea05c97b8814bd879399fec8bba02e983b5570f6ddf33853674a3bb8e089a7"
+  },
+  "vision_tower.encoder.blocks.4.mlp.fc0.weight": {
+   "shape": [
+    4304,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "dafa1cdd5bc94163e908a728dccf6ce908453e21c4815b086fa5108612649800"
+  },
+  "vision_tower.encoder.blocks.4.mlp.fc1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "dc501264ce15d9d51be08a3d7080e5c5cb3b4a8d5871a6dec2426a0bfd7cdc6b"
+  },
+  "vision_tower.encoder.blocks.4.mlp.fc1.weight": {
+   "shape": [
+    1152,
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "8dbf1d04823cb2d0bbc02a3e843017e5e4e8fb6111ffd1166bfc02c6a1f2612c"
+  },
+  "vision_tower.encoder.blocks.4.norm0.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "2b8a37a262a3f4aa72498b364b6c17063d9e77e8eef20b3efb72ff27b6a76fb6"
+  },
+  "vision_tower.encoder.blocks.4.norm0.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "10976f8aa33dd8cee6813bb319022a0b2040f0f65459bf5c400c171fe7034f1a"
+  },
+  "vision_tower.encoder.blocks.4.norm1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "b5aae2c980f8b5746158357ab222aa3ce36aafb9150e1ef55f124a90358cb8b5"
+  },
+  "vision_tower.encoder.blocks.4.norm1.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "d4066c5dcedd907141fb897cde4cfa678f96d94cb6e9a696af421ad31cf11073"
+  },
+  "vision_tower.encoder.blocks.4.wo.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "90dd1e5d11b542d22acd417b685ef55c88475b0f0f6c60fb20c0de19258cfe49"
+  },
+  "vision_tower.encoder.blocks.4.wo.weight": {
+   "shape": [
+    1152,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "e6486d528f1e3d3e163e214f3f8a023a321d4e60df4f903f63e00c82d468c007"
+  },
+  "vision_tower.encoder.blocks.4.wqkv.bias": {
+   "shape": [
+    3456
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "a6582bcec9b7dca40d35488711e1d23d4a272865a249d4785eb8c1091b17c14e"
+  },
+  "vision_tower.encoder.blocks.4.wqkv.weight": {
+   "shape": [
+    3456,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "d74fc12f94ad2eac116995a52bf4c920a0614ef32f7933d7fa5c4aa8386b9548"
+  },
+  "vision_tower.encoder.blocks.5.mlp.fc0.bias": {
+   "shape": [
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "b73f78f6e7832da0771bb20f8aaa1e4da184e3c5d0ced88ff72850d74d5648f0"
+  },
+  "vision_tower.encoder.blocks.5.mlp.fc0.weight": {
+   "shape": [
+    4304,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "96ccb5c9476bfa43f652683da6a40399f961980082b02b3acb5eb48b720377d4"
+  },
+  "vision_tower.encoder.blocks.5.mlp.fc1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "f3144035cf7e1bd323eae79ba65e69d88a8d9ff00ee9342d3500ae18f851c0cb"
+  },
+  "vision_tower.encoder.blocks.5.mlp.fc1.weight": {
+   "shape": [
+    1152,
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "8528693266f207850fb35a9921c213f840495023c68c20bdc1a17238c83320e3"
+  },
+  "vision_tower.encoder.blocks.5.norm0.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "b4e485aa23483856808f86ed0ab00448f3d05b4cd23355e99476ddb6105bd0af"
+  },
+  "vision_tower.encoder.blocks.5.norm0.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "f2c66e66230a61bd2db849cb437451a66af26f545a88e239f972e33af1914a9c"
+  },
+  "vision_tower.encoder.blocks.5.norm1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "e622a80dd04b0292d3ad186c628e3bae1d675069b95dc37c76d0f60312b4f99b"
+  },
+  "vision_tower.encoder.blocks.5.norm1.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "ead76e5be3f965ffcf530c19894deda7544778bc8b6a797bab9fd87119b469fc"
+  },
+  "vision_tower.encoder.blocks.5.wo.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "dc75275ab4cc8eedb820e83de2f33f23252ae8fab42c1fce21afb9fe90346923"
+  },
+  "vision_tower.encoder.blocks.5.wo.weight": {
+   "shape": [
+    1152,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "bb16f9b708e9834cb09c6fa35615b253f80b27b4897a3b4904b9c9057b4dda59"
+  },
+  "vision_tower.encoder.blocks.5.wqkv.bias": {
+   "shape": [
+    3456
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "d618c18b052fc0daaf9d1fb32eee28c474a5178881beea54f05f293e2654bff8"
+  },
+  "vision_tower.encoder.blocks.5.wqkv.weight": {
+   "shape": [
+    3456,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "f05538de3fc5ed6cb520a56d25ea0d9d557cb26470e7f74dfa60bfd65a8d9b55"
+  },
+  "vision_tower.encoder.blocks.6.mlp.fc0.bias": {
+   "shape": [
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "f43baf8cf50f483f6af06c8469942f3c6264f317eb8e8a0bab4e85e9755f8541"
+  },
+  "vision_tower.encoder.blocks.6.mlp.fc0.weight": {
+   "shape": [
+    4304,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "af5b62c0d459d0c5a35b95aa930d7d5893f883283091835a3663dce3f3e64531"
+  },
+  "vision_tower.encoder.blocks.6.mlp.fc1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "260d93189f8dc41fbb5931bdb781555388e14470016837fd7c6881753ee53edd"
+  },
+  "vision_tower.encoder.blocks.6.mlp.fc1.weight": {
+   "shape": [
+    1152,
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "c3a21f640f467e680a80dffd7d3b7bcbdb1527e4604bb893abe91fd1f51797bf"
+  },
+  "vision_tower.encoder.blocks.6.norm0.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "418755bf39db956d1c1bec2d363f39cc1206da6f7e1510ce9d05a874d79fafda"
+  },
+  "vision_tower.encoder.blocks.6.norm0.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "42f5393b2156aa93dd9a13e780f2af36ff57b092659f0218c2dbb7e3ca984231"
+  },
+  "vision_tower.encoder.blocks.6.norm1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "ea0eede66095fe9e342eda0e225fe63bcbc057e27e41fedba55065cb503756e1"
+  },
+  "vision_tower.encoder.blocks.6.norm1.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "c363c874a96c37a735fae2a42522fe081a65bc3736e0e91f46c8c9f2528a0ba0"
+  },
+  "vision_tower.encoder.blocks.6.wo.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "2498a1d571cc7fcaaecfad67c68b3a9deec97eaa58bfc8d8b0a122211f3d8b08"
+  },
+  "vision_tower.encoder.blocks.6.wo.weight": {
+   "shape": [
+    1152,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "c1805a4e1109f83799f78618a663fa1b8f79846a3531ce4457158e5a361555dd"
+  },
+  "vision_tower.encoder.blocks.6.wqkv.bias": {
+   "shape": [
+    3456
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "a2f6c82fc794b313d6dbb654879098c31e34487c624c398e0c9719e703914d54"
+  },
+  "vision_tower.encoder.blocks.6.wqkv.weight": {
+   "shape": [
+    3456,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "6148cb90aedb02904cdd4cc23aacb4e6890b8d96e024c4ef3212f83024216289"
+  },
+  "vision_tower.encoder.blocks.7.mlp.fc0.bias": {
+   "shape": [
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "378f72531adf356b0a7e1edc82998c691f640c720b6716a1270934c7f4ba3d8d"
+  },
+  "vision_tower.encoder.blocks.7.mlp.fc0.weight": {
+   "shape": [
+    4304,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "c8028f0cb3635bc391be2ed3619253fa8e88fc9d4720fdfc649a1b91d6d0cb4e"
+  },
+  "vision_tower.encoder.blocks.7.mlp.fc1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "dc59c33d3313c9930eb2462482f2b25e38be189ada1772a7a782eff327c56c31"
+  },
+  "vision_tower.encoder.blocks.7.mlp.fc1.weight": {
+   "shape": [
+    1152,
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "a09ac1c60bddfe450f0e86946e879c447467fa2407a3ef34031a7339b4abf535"
+  },
+  "vision_tower.encoder.blocks.7.norm0.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "388b088a187cd60fc2f7fccf8a2a2f88fd1dfc25a53d96de84ed3dffb501924e"
+  },
+  "vision_tower.encoder.blocks.7.norm0.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "eb14d2e729c3856c5d9f75cd12bcb68e22795076a4d292ce827bd3fce86eb34d"
+  },
+  "vision_tower.encoder.blocks.7.norm1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "05e090f5d0060a8e8f52657228d77fbe03b8a1d781de2a0c305bec72c847b08e"
+  },
+  "vision_tower.encoder.blocks.7.norm1.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "f3a4edf210e03e233edac9d2aabb1de2ead51ff8c7c957f0ab7e74717ae6ef0a"
+  },
+  "vision_tower.encoder.blocks.7.wo.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "55f21f937414f5a70f50f5a1144925d4dd6fff801bdccd3a0f65848c922b9a25"
+  },
+  "vision_tower.encoder.blocks.7.wo.weight": {
+   "shape": [
+    1152,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "30055d10281ad71e01a786bf0c30d75e9b7465be9ed121301f5de75c96e4ac7c"
+  },
+  "vision_tower.encoder.blocks.7.wqkv.bias": {
+   "shape": [
+    3456
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "1892f98b0ad7ce50ad437fbaebad0f5c1f9f0e9bc144ae48a2f50d396253227d"
+  },
+  "vision_tower.encoder.blocks.7.wqkv.weight": {
+   "shape": [
+    3456,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "68f1216b47561c476895781c786af22887c69a73b0686aef4ea2874750800888"
+  },
+  "vision_tower.encoder.blocks.8.mlp.fc0.bias": {
+   "shape": [
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "4e73f3d38193cc9a990b83cb76485e66edc3bbc7ba5a9753f28daf4402695324"
+  },
+  "vision_tower.encoder.blocks.8.mlp.fc0.weight": {
+   "shape": [
+    4304,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "24f9646b91696a0a4e4e6810e4f213faf741517329362e3ce5c3b0f2a2881fb2"
+  },
+  "vision_tower.encoder.blocks.8.mlp.fc1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "ed38fa9089476288236415a3c88f66a152ce9644eb4d2dbdf3be5db6947abb90"
+  },
+  "vision_tower.encoder.blocks.8.mlp.fc1.weight": {
+   "shape": [
+    1152,
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "6cf951678e5b8ecc2e6b94edf261992fe593142a70a6793751e76156f44d7d3c"
+  },
+  "vision_tower.encoder.blocks.8.norm0.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "ee360a052b221c89a38ec02e450c7940612a0212d2c800a53726fa1aafa1b4c8"
+  },
+  "vision_tower.encoder.blocks.8.norm0.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "3b01405c9001853a4adcb42eac066595eec458731837215dece40de6cc3ed134"
+  },
+  "vision_tower.encoder.blocks.8.norm1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "6f08071687d5bc72897666d17ad052d1b5f539e303ea24f13b90fd45a1b295a5"
+  },
+  "vision_tower.encoder.blocks.8.norm1.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "2569c5432908d6b442a21cc82ea07d33acfd5a0ef4c5877785754a30f72aaaae"
+  },
+  "vision_tower.encoder.blocks.8.wo.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "177e8cf93f377c8f7c16404fc75986f4aa20397e8b26d1a4f8b567832c634875"
+  },
+  "vision_tower.encoder.blocks.8.wo.weight": {
+   "shape": [
+    1152,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "88a544a351cbaade6f8521d55cba7dc5fb4a9c6ba576e633f309448d3e4ecc54"
+  },
+  "vision_tower.encoder.blocks.8.wqkv.bias": {
+   "shape": [
+    3456
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "fa69f54ab11b8ec7323d04e07582720c6e8ebdf0a8a17495b0ddeacf800c576d"
+  },
+  "vision_tower.encoder.blocks.8.wqkv.weight": {
+   "shape": [
+    3456,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "3fd12a14beeed620d8f4de60329c2def975b0c4ad40adc3005bf7f4a927fdaa2"
+  },
+  "vision_tower.encoder.blocks.9.mlp.fc0.bias": {
+   "shape": [
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "f3bde4eab90d3a6688f99e68816c046e6e8590e4d67b809bde6a4b6618cdc604"
+  },
+  "vision_tower.encoder.blocks.9.mlp.fc0.weight": {
+   "shape": [
+    4304,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "92ebe25c893c6540f03a1b1cfc88e3d22ce9dceb287d8c2069ce3de783c90ff6"
+  },
+  "vision_tower.encoder.blocks.9.mlp.fc1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "ae2d140d5c614eb9885b15f305281c2235ade568503b5659badc2ffc279ef439"
+  },
+  "vision_tower.encoder.blocks.9.mlp.fc1.weight": {
+   "shape": [
+    1152,
+    4304
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "ac2c3aaa36d56a18a07c8ff8928ff427c5cd55bc45d66962992ad5bc9923f18a"
+  },
+  "vision_tower.encoder.blocks.9.norm0.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "4c2bf6986db7f7aaeba6550099003da248590c08bae10615e94f959f28b88817"
+  },
+  "vision_tower.encoder.blocks.9.norm0.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "8ea97169c09ad802253e4099203852c436ae94c06107db2e4293ebea93ebd979"
+  },
+  "vision_tower.encoder.blocks.9.norm1.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "d1ac8fb4d23c560d7e2bed8d2d6a21755633d2147c1aef81094df3f11d737eec"
+  },
+  "vision_tower.encoder.blocks.9.norm1.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "1a625406b1d303cc7307c480b0d461577fdbc8f99313f22ddb8b06e9e3f9821c"
+  },
+  "vision_tower.encoder.blocks.9.wo.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "197787df7b8b11b8327832b720df69bdc566c015d58657891609e8afaeff10ef"
+  },
+  "vision_tower.encoder.blocks.9.wo.weight": {
+   "shape": [
+    1152,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "26bc94fb751de37e104e5843d30b9088001ba9f3765eb877711361da8ab26148"
+  },
+  "vision_tower.encoder.blocks.9.wqkv.bias": {
+   "shape": [
+    3456
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "a101a92289a0b7d7d4353653d35a4e3901904fd67831b51c9998d15f50d396ed"
+  },
+  "vision_tower.encoder.blocks.9.wqkv.weight": {
+   "shape": [
+    3456,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "5f68bb8c9b47f47db6b3a0e5e3643238112609b7daef9238a062602ca8b8044e"
+  },
+  "vision_tower.encoder.final_layernorm.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "3fe436b14475ee68e2512637fcf896d8692d574bfa88f22792c4207d338bd32c"
+  },
+  "vision_tower.encoder.final_layernorm.weight": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "eeed2ee358bd09037a3061233eabafe36e70a3f0a40902d1568cea87c652af42"
+  },
+  "vision_tower.patch_embed.pos_emb.weight": {
+   "shape": [
+    64,
+    64,
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "67c08051e90da7deffdbe5abd7d4a8eeefd82182ea33e5c8d93266cdcd3d6951"
+  },
+  "vision_tower.patch_embed.proj.bias": {
+   "shape": [
+    1152
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "7d37428d8e6a954923838267b585d9bed903d759b50a6103fdc3b59608279eba"
+  },
+  "vision_tower.patch_embed.proj.weight": {
+   "shape": [
+    1152,
+    3,
+    14,
+    14
+   ],
+   "dtype": "BF16",
+   "shard": "model-00064-of-000064.safetensors",
+   "sha256": "ef1208ef51324c6fe6175b800ad7747b17b3d91b2d56c4ed7b51d136ace08a47"
+  }
+ }
+}
