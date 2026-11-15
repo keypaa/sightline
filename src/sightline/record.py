@@ -97,12 +97,14 @@ class RunRecord:
         repo: str | Path | None = None,
         runtime: dict[str, Any] | None = None,
         chat_template: dict[str, Any] | None = None,
+        outcome: str | None = None,
     ) -> None:
         self.root = Path(root)
         self.dry_run = dry_run
         self.config = config if config is not None else resolve_config(Config())
         self.runtime = runtime
         self.chat_template = chat_template
+        self.outcome = outcome
         self.repo = find_repo(Path(repo) if repo is not None else Path.cwd())
         self.run_id = run_id or make_run_id(self.repo)
         self.run_path = self.root / "run.json"
@@ -149,7 +151,9 @@ class RunRecord:
             "dtypes": self.config["precision"],
             "metrics_path": self.metrics_path.name,
             "gpu_hours": 0.0,
-            "outcome": "dry run: no model loaded" if self.dry_run else "pending",
+            "outcome": self.outcome
+            if self.outcome is not None
+            else ("dry run: no model loaded" if self.dry_run else "pending"),
         }
 
     def write(self) -> Path:

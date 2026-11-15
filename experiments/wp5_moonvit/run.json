@@ -7,7 +7,7 @@
   },
   "code": {
     "branch": "wp5-moonvit",
-    "commit": "d167d5865385fdc6e8a34f066e18b430655f3a1d",
+    "commit": "2c9358e2a48effe96b1db4d820d81573a93b2175",
     "dirty": true
   },
   "config": {
@@ -67,7 +67,7 @@
       "weight_decay": 0.1
     }
   },
-  "created_utc": "2026-11-15T13:49:19.714134+00:00",
+  "created_utc": "2026-11-15T13:50:40.739322+00:00",
   "dry_run": false,
   "dtypes": {
     "autocast": "bfloat16",
@@ -109,8 +109,8 @@
       "tokenizer_revision": "70d244cc86ccca08cf5af4e1e306ecf908b1ad5e"
     }
   },
-  "outcome": "pending",
-  "run_id": "20261115T134919Z-d167d58",
+  "outcome": "WP5: tower parity on CPU; FA2/GPU pending",
+  "run_id": "20261115T135040Z-2c9358e",
   "runtime": {
     "derived_at_runtime": true,
     "k3_tower_width": 4096,

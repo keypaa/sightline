@@ -63,6 +63,11 @@ def test_runtime_and_chat_template_overrides(tmp_path: Path) -> None:
     assert data["chat_template"]["rendered_sha256"] == "r"
 
 
+def test_outcome_override(tmp_path: Path) -> None:
+    rec = RunRecord(root=tmp_path, dry_run=False, outcome="done")
+    assert json.loads(rec.write().read_text())["outcome"] == "done"
+
+
 def test_git_state_has_commit_branch_and_dirty() -> None:
     root = Path(__file__).resolve().parents[2]
     state = git_state(root)
