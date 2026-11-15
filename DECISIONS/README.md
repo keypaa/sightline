@@ -39,3 +39,4 @@ One short dated file per decision, named `NNNN-short-title.md` and based on `_te
 | 0031 | M1 training recipe and Modal sizing | M1b |
 | 0032 | G1 thresholds and evaluation | M1c |
 | 0033 | M1b micro-batch 4 after the A10G OOM | M1b |
+| 0034 | M1b micro-batch 16 on the RTX PRO 6000 | M1b |
