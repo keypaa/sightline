@@ -106,6 +106,15 @@ def generate_answer(model, tok, projector, prompt_ids, features, device):
     return tok.decode(generated[0], skip_special_tokens=True).strip().lower().strip(" .!")
 
 
+def chance_rates(examples) -> dict[str, float]:
+    """Guessing rate per task, from the distinct answers the test split contains."""
+
+    answers: dict[str, set[str]] = {}
+    for example in examples:
+        answers.setdefault(example.task, set()).add(example.answer)
+    return {task: 1.0 / len(options) for task, options in answers.items()}
+
+
 def evaluate(model, tok, encoder, projector, examples, device):
     features = torch.cat([encoder.encode([e.image]) for e in examples], dim=0)
     blank = Image.new("RGB", (448, 448), (255, 255, 255))
@@ -171,7 +180,7 @@ def evaluate(model, tok, encoder, projector, examples, device):
             "untrained": untrained_c,
         }
 
-    report = g1_report(per_task)
+    report = g1_report(per_task, chance_rates(examples))
     return {"report": report, "g1_pass": g1_pass(report), "per_task": per_task}
 
 

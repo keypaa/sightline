@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from math import comb
+from math import comb, sqrt
 
 import numpy as np
 import torch
@@ -97,23 +97,60 @@ def paired_bootstrap(differences, n: int = 10000, seed: int = 0) -> dict:
     return {"mean": float(x.mean()), "lo": float(lo), "hi": float(hi)}
 
 
-def g1_report(per_task: dict[str, dict[str, list[bool]]]) -> dict[str, dict]:
-    """Per-task correct/blank/mismatched/no-tokens report with McNemar and bootstrap."""
+def wilson_interval(successes: int, n: int, z: float = 1.96) -> tuple[float, float]:
+    """Wilson score interval for a binomial proportion.
+
+    Used to test a control condition against its chance rate: if the chance rate
+    lies inside the interval, the control is indistinguishable from guessing.
+    """
+
+    if n <= 0:
+        raise ValueError(f"n must be positive, got {n}")
+    p = successes / n
+    denom = 1.0 + z**2 / n
+    centre = (p + z**2 / (2.0 * n)) / denom
+    half = z * sqrt(p * (1.0 - p) / n + z**2 / (4.0 * n**2)) / denom
+    return (max(0.0, centre - half), min(1.0, centre + half))
+
+
+def g1_report(
+    per_task: dict[str, dict[str, list[bool]]], chance: dict[str, float]
+) -> dict[str, dict]:
+    """Per-task correct/blank/mismatched/no-tokens report with McNemar and bootstrap.
+
+    ``chance`` maps task to its guessing rate (1 over the number of answer options)
+    and is required: DECISIONS 0032 freezes the controls against chance as a G1
+    criterion, so it is checked here rather than by the caller.
+
+    The check is one-sided. A control that scores far *below* chance is a collapsed
+    control and passes; only a control significantly *above* chance fails, because
+    that means the blind path carries real information. The untrained-projector
+    condition is reported as a diagnostic only; it is not one of the controls that
+    the pass criteria compare against.
+    """
 
     results = {}
     for task, data in per_task.items():
+        if task not in chance:
+            raise KeyError(f"no chance rate for task {task!r}")
         correct = torch.as_tensor(data["correct"], dtype=torch.bool)
         controls = {
             name: torch.as_tensor(data[name], dtype=torch.bool)
             for name in ("blank", "mismatched", "no_tokens")
         }
         rates = {name: float(c.float().mean()) for name, c in controls.items()}
+        intervals = {name: wilson_interval(int(c.sum()), len(c)) for name, c in controls.items()}
+        within = {name: intervals[name][0] <= chance[task] for name in controls}
         best_name = max(rates, key=rates.get)
         best = controls[best_name]
         correct_rate = float(correct.float().mean())
         results[task] = {
             "correct": correct_rate,
+            "chance": chance[task],
             "controls": rates,
+            "control_intervals": {name: list(iv) for name, iv in intervals.items()},
+            "control_within_chance": within,
+            "controls_within_chance": all(within.values()),
             "best_control": best_name,
             "vision_minus_blind": correct_rate - rates[best_name],
             "mcnemar": mcnemar(correct, best),
@@ -121,6 +158,10 @@ def g1_report(per_task: dict[str, dict[str, list[bool]]]) -> dict[str, dict]:
                 (correct.float() - best.float()).numpy(), n=10000, seed=0
             ),
         }
+        if "untrained" in data:
+            results[task]["untrained"] = float(
+                torch.as_tensor(data["untrained"], dtype=torch.bool).float().mean()
+            )
     return results
 
 
@@ -133,5 +174,6 @@ def g1_pass(results: dict[str, dict]) -> bool:
         if r["vision_minus_blind"] >= 0.30
         and r["mcnemar"]["p"] < 0.01
         and r["bootstrap"]["lo"] > 0.0
+        and r["controls_within_chance"]
     ]
     return len(passing) >= 2
