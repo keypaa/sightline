@@ -1,0 +1,2 @@
+{"event": "wp4_tiny_20_steps", "passed": 2, "steps": 20}
+{"cpu_seconds": 126.9, "event": "wp4_real", "passed": 1, "peak_rss_mb": 12640.2}
