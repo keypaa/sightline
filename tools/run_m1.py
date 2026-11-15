@@ -221,6 +221,11 @@ def main() -> int:
         default=200,
         help="write a checkpoint every N steps so --resume has a recent state (0 disables)",
     )
+    parser.add_argument(
+        "--no-trim-logits",
+        action="store_true",
+        help="project the vocabulary at every position; baseline for the logits-trim optimization",
+    )
     args = parser.parse_args()
 
     if not torch.cuda.is_available():
@@ -264,6 +269,7 @@ def main() -> int:
         device="cuda",
         dtype=torch.bfloat16,
         cycle=True,
+        trim_logits=not args.no_trim_logits,
     )
 
     started = time.perf_counter()
@@ -293,6 +299,7 @@ def main() -> int:
         probe["elapsed_s"] = round(time.perf_counter() - started, 2)
         probe["seed"] = args.seed
         probe["micro_batch"] = args.micro_batch
+        probe["trim_logits"] = not args.no_trim_logits
         record = RunRecord(
             Path(f"experiments/m1b_probe/micro{args.micro_batch}"),
             dry_run=False,
@@ -334,6 +341,7 @@ def main() -> int:
         "seed": args.seed,
         "max_steps": args.max_steps,
         "micro_batch": args.micro_batch,
+        "trim_logits": not args.no_trim_logits,
         "final_loss": trainer.losses[-1] if trainer.losses else None,
         "loss_every_100": trainer.losses[::100] if trainer.losses else [],
         "eval": eval_result,

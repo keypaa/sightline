@@ -220,6 +220,82 @@ def test_on_step_callback_reports_progress() -> None:
     assert len(trainer.step_times) == 3
 
 
+def test_trimming_logits_leaves_the_loss_and_gradients_unchanged() -> None:
+    model = tiny_model()
+    batches = make_batches(seed=11, n_micro=2)
+
+    torch.manual_seed(123)
+    full = Trainer(
+        model,
+        Projector(input_width=HIDDEN, reader_width=HIDDEN),
+        batches,
+        micro_batches_per_step=2,
+        base_lr=1e-3,
+        warmup_steps=0,
+        max_steps=2,
+        weight_decay=0.0,
+        betas=(0.9, 0.95),
+        grad_clip=1.0,
+        placeholder_id=PLACEHOLDER,
+        cycle=True,
+        trim_logits=False,
+    )
+    torch.manual_seed(123)
+    trimmed = Trainer(
+        model,
+        Projector(input_width=HIDDEN, reader_width=HIDDEN),
+        batches,
+        micro_batches_per_step=2,
+        base_lr=1e-3,
+        warmup_steps=0,
+        max_steps=2,
+        weight_decay=0.0,
+        betas=(0.9, 0.95),
+        grad_clip=1.0,
+        placeholder_id=PLACEHOLDER,
+        cycle=True,
+        trim_logits=True,
+    )
+
+    full.train(max_steps=2)
+    trimmed.train(max_steps=2)
+
+    assert trimmed.losses == pytest.approx(full.losses, abs=1e-5)
+    for a, b in zip(
+        full.projector.state_dict().values(),
+        trimmed.projector.state_dict().values(),
+        strict=True,
+    ):
+        assert torch.allclose(a, b, atol=1e-6)
+
+
+def test_trimmed_logits_are_shorter_than_the_sequence() -> None:
+    model = tiny_model()
+    batches = make_batches(seed=12, n_micro=2)
+    trainer = make_trainer(model, batches)
+    trainer.cycle = True
+    trainer.trim_logits = True
+
+    batch = batches[0]
+    labels = batch.labels
+    supervised = int((labels != -100).sum(dim=1).max())
+
+    captured = {}
+    original = trainer._logits
+
+    def spy(spliced, attention_mask, labels):
+        out = original(spliced, attention_mask, labels)
+        captured["seq"] = spliced.shape[1]
+        captured["logits"] = out.shape[1]
+        return out
+
+    trainer._logits = spy
+    trainer.train_step()
+
+    assert captured["logits"] == supervised + 1
+    assert captured["logits"] < captured["seq"]
+
+
 def test_save_checkpoint_is_atomic(tmp_path: Path) -> None:
     model = tiny_model()
     batches = make_batches(seed=9, n_micro=4)

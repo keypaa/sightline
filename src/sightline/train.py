@@ -21,7 +21,7 @@ import numpy as np
 import torch
 
 from sightline.backbone import splice
-from sightline.objective import answer_only_loss
+from sightline.objective import IGNORE_INDEX, answer_only_loss
 from sightline.scheduler import warmup_cosine_lr
 
 
@@ -51,6 +51,7 @@ class Trainer:
         device: str | torch.device = "cpu",
         dtype: torch.dtype = torch.float32,
         cycle: bool = False,
+        trim_logits: bool = True,
         on_step: Callable[[dict[str, Any]], None] | None = None,
     ) -> None:
         self.model = model
@@ -65,6 +66,7 @@ class Trainer:
         self.device = torch.device(device)
         self.dtype = dtype
         self.cycle = cycle
+        self.trim_logits = trim_logits
         self.on_step = on_step
         self.step_times: deque[float] = deque(maxlen=50)
         self.projector = projector.to(self.device)
@@ -106,10 +108,10 @@ class Trainer:
                 embed = self.model.get_input_embeddings()
                 visual = self.projector(features)
                 spliced = splice(input_ids, visual, self.placeholder_id, embed.weight)
-                logits = self.model(
-                    inputs_embeds=spliced, attention_mask=batch.attention_mask
-                ).logits
-                loss = answer_only_loss(logits[:, :-1], labels[:, 1:])
+                logits = self._logits(spliced, batch.attention_mask, labels)
+                loss = answer_only_loss(
+                    logits[:, :-1], labels[:, labels.shape[1] - (logits.shape[1] - 1) :]
+                )
                 (loss / self.micro_batches_per_step).backward()
                 total_loss += loss.item() / self.micro_batches_per_step
 
@@ -136,6 +138,26 @@ class Trainer:
         while self.step < max_steps:
             self.train_step()
         return self.losses
+
+    def _logits(
+        self, spliced: torch.Tensor, attention_mask: torch.Tensor | None, labels: torch.Tensor
+    ) -> torch.Tensor:
+        """Reader logits, trimmed to the positions that can be supervised.
+
+        Only the answer tokens carry a label, so projecting the vocabulary at
+        every position costs a [batch, seq, vocab] tensor for nothing. With
+        ``logits_to_keep`` the reader computes the last k+1 positions, which is
+        where the k supervised targets are predicted from.
+        """
+
+        keep = 0
+        if self.trim_logits:
+            supervised = int((labels != IGNORE_INDEX).sum(dim=1).max())
+            if supervised:
+                keep = min(supervised + 1, labels.shape[1])
+        return self.model(
+            inputs_embeds=spliced, attention_mask=attention_mask, logits_to_keep=keep
+        ).logits
 
     def probe(self, steps: int, warmup: int = 2) -> dict[str, Any]:
         """Time ``steps`` optimizer steps after ``warmup`` untimed ones.
