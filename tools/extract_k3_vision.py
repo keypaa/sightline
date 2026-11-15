@@ -68,10 +68,11 @@ def load_safetensors_raw(path: Path):
     return out
 
 
-def extract(src, expect_tower, expect_proj, allow_mismatch):
+def extract(src, expect_tower, expect_proj, allow_mismatch, prefixes=PREFIXES):
     index = json.loads(src.whole("model.safetensors.index.json")); wm = index["weight_map"]
-    wanted = {k: s for k, s in wm.items() if k.startswith(PREFIXES)}
-    n_t = sum(k.startswith(PREFIXES[0]) for k in wanted); n_p = sum(k.startswith(PREFIXES[1]) for k in wanted)
+    wanted = {k: s for k, s in wm.items() if k.startswith(prefixes)}
+    n_t = sum(k.startswith(prefixes[0]) for k in wanted)
+    n_p = sum(any(k.startswith(pre) for pre in prefixes[1:]) for k in wanted)
     print(f"index: {len(wm)} tensors, {len(set(wm.values()))} shards; wanted {n_t} tower + {n_p} projector tensors")
     if (n_t, n_p) != (expect_tower, expect_proj) and not allow_mismatch:
         sys.exit(f"expected {expect_tower}+{expect_proj}, found {n_t}+{n_p}; pass --allow-mismatch to continue")
@@ -88,9 +89,9 @@ def extract(src, expect_tower, expect_proj, allow_mismatch):
     return tensors
 
 
-def compare(new, old_path, strip):
+def compare(new, old_path, strip, prefixes=PREFIXES):
     old = load_safetensors_raw(Path(old_path))
-    if strip: old = {(strip + k if not k.startswith(PREFIXES) else k): v for k, v in old.items()}
+    if strip: old = {(strip + k if not k.startswith(prefixes) else k): v for k, v in old.items()}
     same = [k for k in new if k in old and new[k]["raw"] == old[k]["raw"] and new[k]["shape"] == old[k]["shape"] and new[k]["dtype"] == old[k]["dtype"]]
     diff = [k for k in new if k in old and k not in same]
     print(f"compare: {len(same)} identical, {len(diff)} different, {len([k for k in new if k not in old])} missing from old, {len([k for k in old if k not in new])} extra in old")
@@ -102,22 +103,27 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument("--repo", default="moonshotai/Kimi-K3"); p.add_argument("--revision", default="main")
     p.add_argument("--out", default="k3_vision.safetensors"); p.add_argument("--local-dir")
-    p.add_argument("--expect-tower", type=int, default=165); p.add_argument("--expect-projector", type=int, default=3)
+    p.add_argument("--expect-tower", type=int, default=165)
+    p.add_argument("--expect-projector", type=int, default=3)
+    p.add_argument("--prefixes", default=",".join(PREFIXES))
+    p.add_argument("--manifest")
     p.add_argument("--allow-mismatch", action="store_true"); p.add_argument("--compare"); p.add_argument("--strip-prefix-for-compare", default="")
     a = p.parse_args()
+    prefixes = tuple(pre for pre in a.prefixes.split(",") if pre)
     src = LocalSource(a.local_dir) if a.local_dir else HttpSource(a.repo, a.revision)
     if a.revision == "main" and not a.local_dir: print("WARNING: pin a commit hash with --revision for reproducibility", file=sys.stderr)
-    tensors = extract(src, a.expect_tower, a.expect_projector, a.allow_mismatch)
+    tensors = extract(src, a.expect_tower, a.expect_projector, a.allow_mismatch, prefixes)
     nbytes = sum(len(t["raw"]) for t in tensors.values())
-    params = {pre: sum(math.prod(t["shape"]) for k, t in tensors.items() if k.startswith(pre)) for pre in PREFIXES}
+    params = {pre: sum(math.prod(t["shape"]) for k, t in tensors.items() if k.startswith(pre)) for pre in prefixes}
     print(f"dtypes: {sorted({t['dtype'] for t in tensors.values()})}; bytes {nbytes:,}; parameters {params}")
     write_safetensors(Path(a.out), tensors, {"format": "pt", "source_repo": a.repo, "source_revision": a.revision})
     manifest = {"repo": a.repo, "revision": a.revision, "bytes": nbytes, "parameters": params,
                 "file_sha256": hashlib.sha256(Path(a.out).read_bytes()).hexdigest(),
                 "tensors": {k: {"shape": t["shape"], "dtype": t["dtype"], "shard": t["shard"], "sha256": hashlib.sha256(t["raw"]).hexdigest()} for k, t in sorted(tensors.items())}}
-    if a.compare: manifest["compare"] = compare(tensors, a.compare, a.strip_prefix_for_compare)
-    Path(a.out + ".manifest.json").write_text(json.dumps(manifest, indent=1))
-    print("wrote", a.out, "and manifest")
+    if a.compare: manifest["compare"] = compare(tensors, a.compare, a.strip_prefix_for_compare, prefixes)
+    manifest_path = Path(a.manifest) if a.manifest else Path(a.out + ".manifest.json")
+    manifest_path.write_text(json.dumps(manifest, indent=1))
+    print("wrote", a.out, "and", manifest_path)
 
 
 if __name__ == "__main__":

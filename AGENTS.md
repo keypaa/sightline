@@ -91,11 +91,13 @@ reports/            generated reports (small, diffable)
 ## Commands
 
 - Environment: `uv sync` (reads `uv.lock`; Python 3.12+; torch 2.13.0+cu130). Without sync, prefix Python commands with `PYTHONPATH=src`.
-- Tests: `pytest` (config in `pyproject.toml`; `pythonpath = ["src"]`).
-- Lint: `ruff check src tests`.
-- Format: `ruff format --check src tests` (write with `ruff format src tests`).
+- Tests: `pytest` (config in `pyproject.toml`; `pythonpath = ["src"]`). Tower tests are `slow`-marked and skipped by default; run with `pytest -m slow`.
+- Lint: `ruff check src tests modal`.
+- Format: `ruff format --check src tests modal` (write with `ruff format src tests modal`).
 - Dry run: `python -m sightline.record --dry-run --out experiments/_dryrun`.
 - GPU check: `python -c "import torch; print(torch.cuda.get_arch_list(), torch.cuda.is_available())"`.
+- K2.6 extraction: `python tools/extract_k3_vision.py --repo moonshotai/Kimi-K2.6 --revision 7eb5002f6aadc958aed6a9177b7ed26bb94011bb --prefixes vision_tower.,mm_projector. --expect-tower 329 --expect-projector 6 --out artifacts/k26_vision_7eb5002f.safetensors --manifest docs/manifests/k26_vision_7eb5002f.manifest.json`.
+- Modal parity: `python modal/wp6_parity.py --resolutions 448 672 896 --count 20`.
 
 ## Style
 

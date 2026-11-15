@@ -44,6 +44,7 @@ filterwarnings = [
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+extend-exclude = ["src/sightline/vision_k3", "src/sightline/vision_k25"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]

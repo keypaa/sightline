@@ -2,7 +2,7 @@
 
 A research and learning project on post-hoc visual retrofitting: attach a frozen vision encoder (Kimi MoonViT) to a frozen, text-only LLM through a small trainable projector, and measure honestly what vision capability results and where it stops. The long-term target is DeepSeek-V4-Flash-0731; the first reader is Qwen3-1.7B.
 
-**Status:** M0 (plumbing) in progress: WP0, WP1, WP2 and WP5 done; WP6 next. See CHARTER.md for the milestones.
+**Status:** M0 (plumbing) in progress: WP0, WP1, WP2, WP5 and WP6 done; next WP3/WP4. See CHARTER.md for the milestones.
 
 ## Start here
 
@@ -19,6 +19,7 @@ CHARTER.md  README.md  EXPERIMENTS.md  AGENTS.md  CLAUDE.md
 docs/          project documents and small manifests
 DECISIONS/     dated decision records (see DECISIONS/README.md)
 tools/         standalone scripts (K3 vision extraction, palette generator)
+modal/         test-only Modal execution harness (not imported by src)
 src/sightline/ the package: config, data, vision, projector, backbone, objective, train, evaluate, record
 tests/unit/        unit tests
 tests/conformance/ tests every reader adapter must pass

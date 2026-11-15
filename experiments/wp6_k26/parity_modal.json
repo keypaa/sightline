@@ -1,0 +1,550 @@
+{
+  "device": "cuda",
+  "gpu": "Tesla T4",
+  "elapsed_seconds": 180.8,
+  "peak_rss_mb": 8156.9,
+  "cpu_seconds": 177.3,
+  "max_gpu_memory_mb": 5684.7,
+  "results": [
+    {
+      "resolution": 448,
+      "index": 0,
+      "tokens": 256,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 1.0,
+      "allclose": true
+    },
+    {
+      "resolution": 448,
+      "index": 1,
+      "tokens": 256,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 0.9999998807907104,
+      "allclose": true
+    },
+    {
+      "resolution": 448,
+      "index": 2,
+      "tokens": 256,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 0.9999998807907104,
+      "allclose": true
+    },
+    {
+      "resolution": 448,
+      "index": 3,
+      "tokens": 256,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 1.0,
+      "allclose": true
+    },
+    {
+      "resolution": 448,
+      "index": 4,
+      "tokens": 256,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 0.9999998807907104,
+      "allclose": true
+    },
+    {
+      "resolution": 448,
+      "index": 5,
+      "tokens": 256,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 1.0,
+      "allclose": true
+    },
+    {
+      "resolution": 448,
+      "index": 6,
+      "tokens": 256,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 1.0,
+      "allclose": true
+    },
+    {
+      "resolution": 448,
+      "index": 7,
+      "tokens": 256,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 0.9999998807907104,
+      "allclose": true
+    },
+    {
+      "resolution": 448,
+      "index": 8,
+      "tokens": 256,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 1.0,
+      "allclose": true
+    },
+    {
+      "resolution": 448,
+      "index": 9,
+      "tokens": 256,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 0.9999999403953552,
+      "allclose": true
+    },
+    {
+      "resolution": 448,
+      "index": 10,
+      "tokens": 256,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 0.9999998807907104,
+      "allclose": true
+    },
+    {
+      "resolution": 448,
+      "index": 11,
+      "tokens": 256,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 1.0000001192092896,
+      "allclose": true
+    },
+    {
+      "resolution": 448,
+      "index": 12,
+      "tokens": 256,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 1.0000001192092896,
+      "allclose": true
+    },
+    {
+      "resolution": 448,
+      "index": 13,
+      "tokens": 256,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 0.9999998807907104,
+      "allclose": true
+    },
+    {
+      "resolution": 448,
+      "index": 14,
+      "tokens": 256,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 0.9999999403953552,
+      "allclose": true
+    },
+    {
+      "resolution": 448,
+      "index": 15,
+      "tokens": 256,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 1.0,
+      "allclose": true
+    },
+    {
+      "resolution": 448,
+      "index": 16,
+      "tokens": 256,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 0.9999998807907104,
+      "allclose": true
+    },
+    {
+      "resolution": 448,
+      "index": 17,
+      "tokens": 256,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 1.0,
+      "allclose": true
+    },
+    {
+      "resolution": 448,
+      "index": 18,
+      "tokens": 256,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 1.0,
+      "allclose": true
+    },
+    {
+      "resolution": 448,
+      "index": 19,
+      "tokens": 256,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 0.9999998807907104,
+      "allclose": true
+    },
+    {
+      "resolution": 672,
+      "index": 0,
+      "tokens": 576,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 1.0000001192092896,
+      "allclose": true
+    },
+    {
+      "resolution": 672,
+      "index": 1,
+      "tokens": 576,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 0.9999998807907104,
+      "allclose": true
+    },
+    {
+      "resolution": 672,
+      "index": 2,
+      "tokens": 576,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 0.9999998807907104,
+      "allclose": true
+    },
+    {
+      "resolution": 672,
+      "index": 3,
+      "tokens": 576,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 0.9999998807907104,
+      "allclose": true
+    },
+    {
+      "resolution": 672,
+      "index": 4,
+      "tokens": 576,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 0.9999998807907104,
+      "allclose": true
+    },
+    {
+      "resolution": 672,
+      "index": 5,
+      "tokens": 576,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 1.0,
+      "allclose": true
+    },
+    {
+      "resolution": 672,
+      "index": 6,
+      "tokens": 576,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 0.9999998211860657,
+      "allclose": true
+    },
+    {
+      "resolution": 672,
+      "index": 7,
+      "tokens": 576,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 0.9999998807907104,
+      "allclose": true
+    },
+    {
+      "resolution": 672,
+      "index": 8,
+      "tokens": 576,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 1.0,
+      "allclose": true
+    },
+    {
+      "resolution": 672,
+      "index": 9,
+      "tokens": 576,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 0.9999999403953552,
+      "allclose": true
+    },
+    {
+      "resolution": 672,
+      "index": 10,
+      "tokens": 576,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 0.9999998807907104,
+      "allclose": true
+    },
+    {
+      "resolution": 672,
+      "index": 11,
+      "tokens": 576,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 1.0000001192092896,
+      "allclose": true
+    },
+    {
+      "resolution": 672,
+      "index": 12,
+      "tokens": 576,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 1.0000001192092896,
+      "allclose": true
+    },
+    {
+      "resolution": 672,
+      "index": 13,
+      "tokens": 576,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 0.9999998807907104,
+      "allclose": true
+    },
+    {
+      "resolution": 672,
+      "index": 14,
+      "tokens": 576,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 0.9999999403953552,
+      "allclose": true
+    },
+    {
+      "resolution": 672,
+      "index": 15,
+      "tokens": 576,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 1.0,
+      "allclose": true
+    },
+    {
+      "resolution": 672,
+      "index": 16,
+      "tokens": 576,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 0.9999998807907104,
+      "allclose": true
+    },
+    {
+      "resolution": 672,
+      "index": 17,
+      "tokens": 576,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 1.0,
+      "allclose": true
+    },
+    {
+      "resolution": 672,
+      "index": 18,
+      "tokens": 576,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 0.9999998807907104,
+      "allclose": true
+    },
+    {
+      "resolution": 672,
+      "index": 19,
+      "tokens": 576,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 0.9999998807907104,
+      "allclose": true
+    },
+    {
+      "resolution": 896,
+      "index": 0,
+      "tokens": 1024,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 1.0,
+      "allclose": true
+    },
+    {
+      "resolution": 896,
+      "index": 1,
+      "tokens": 1024,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 1.0,
+      "allclose": true
+    },
+    {
+      "resolution": 896,
+      "index": 2,
+      "tokens": 1024,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 0.9999999403953552,
+      "allclose": true
+    },
+    {
+      "resolution": 896,
+      "index": 3,
+      "tokens": 1024,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 0.9999998807907104,
+      "allclose": true
+    },
+    {
+      "resolution": 896,
+      "index": 4,
+      "tokens": 1024,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 1.0,
+      "allclose": true
+    },
+    {
+      "resolution": 896,
+      "index": 5,
+      "tokens": 1024,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 1.0,
+      "allclose": true
+    },
+    {
+      "resolution": 896,
+      "index": 6,
+      "tokens": 1024,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 1.0,
+      "allclose": true
+    },
+    {
+      "resolution": 896,
+      "index": 7,
+      "tokens": 1024,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 1.0,
+      "allclose": true
+    },
+    {
+      "resolution": 896,
+      "index": 8,
+      "tokens": 1024,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 1.0000001192092896,
+      "allclose": true
+    },
+    {
+      "resolution": 896,
+      "index": 9,
+      "tokens": 1024,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 1.0000001192092896,
+      "allclose": true
+    },
+    {
+      "resolution": 896,
+      "index": 10,
+      "tokens": 1024,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 1.0,
+      "allclose": true
+    },
+    {
+      "resolution": 896,
+      "index": 11,
+      "tokens": 1024,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 0.9999998807907104,
+      "allclose": true
+    },
+    {
+      "resolution": 896,
+      "index": 12,
+      "tokens": 1024,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 1.0,
+      "allclose": true
+    },
+    {
+      "resolution": 896,
+      "index": 13,
+      "tokens": 1024,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 1.0,
+      "allclose": true
+    },
+    {
+      "resolution": 896,
+      "index": 14,
+      "tokens": 1024,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 1.0,
+      "allclose": true
+    },
+    {
+      "resolution": 896,
+      "index": 15,
+      "tokens": 1024,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 1.0000001192092896,
+      "allclose": true
+    },
+    {
+      "resolution": 896,
+      "index": 16,
+      "tokens": 1024,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 1.0,
+      "allclose": true
+    },
+    {
+      "resolution": 896,
+      "index": 17,
+      "tokens": 1024,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 1.0,
+      "allclose": true
+    },
+    {
+      "resolution": 896,
+      "index": 18,
+      "tokens": 1024,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 1.0,
+      "allclose": true
+    },
+    {
+      "resolution": 896,
+      "index": 19,
+      "tokens": 1024,
+      "max_abs": 0.0,
+      "max_rel": 0.0,
+      "cosine": 1.0,
+      "allclose": true
+    }
+  ]
+}

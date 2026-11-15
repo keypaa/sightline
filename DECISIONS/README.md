@@ -22,3 +22,6 @@ One short dated file per decision, named `NNNN-short-title.md` and based on `_te
 | 0014 | Golden-splice and padding tolerances | WP2 |
 | 0015 | Vendor the K3 MoonViT-V2 tower | WP5 |
 | 0016 | K3 tower attention has no SDPA path | WP5 |
+| 0017 | K2.6 MoonViT extraction and vendoring | WP6 |
+| 0018 | K2.6 parity tolerance | WP6 |
+| 0019 | Modal is a test harness, not production | WP6 |

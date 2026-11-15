@@ -1,4 +1,4 @@
-"""MoonViT-V2 encoder wrapper.
+"""MoonViT-V2 (K3) encoder wrapper.
 
 Loads the K3 vision tower from the pinned configuration and the extracted
 tower weights, preprocesses images with the official K3 processor, and returns
@@ -11,24 +11,23 @@ never hard-coded. The tower is frozen and runs under ``torch.no_grad()``.
 from __future__ import annotations
 
 import json
-from collections.abc import Sequence
 from pathlib import Path
 
 import torch
-from PIL import Image
 from safetensors.torch import load_file
 
+from sightline.vision_encoder import MoonViTEncoder
 from sightline.vision_k3 import MoonViT3dPretrainedModel, VisionTowerConfig
 from sightline.vision_k3.configuration_kimi_k3 import KimiK3Config
 from sightline.vision_k3.kimi_k3_vision_processing import KimiK3VisionProcessor
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_K3_DIR = REPO_ROOT / "artifacts" / "k3_ref"
+DEFAULT_K3_DIR = Path(__file__).resolve().parent / "vision_k3"
 DEFAULT_WEIGHTS = REPO_ROOT / "artifacts" / "k3_vision_f831ab66.safetensors"
 ALLOWED_ATTENTION = ("eager", "flash_attention_2")
 
 
-class K3VisionEncoder:
+class K3VisionEncoder(MoonViTEncoder):
     def __init__(
         self,
         k3_dir: str | Path = DEFAULT_K3_DIR,
@@ -62,43 +61,13 @@ class K3VisionEncoder:
                 f"tower weight mismatch: {len(missing)} missing, {len(unexpected)} unexpected"
             )
 
-        self.device = torch.device(device)
-        self.dtype = dtype
-        self.model = model.to(device=self.device, dtype=dtype)
-        self.model.eval()
-        self.merge_kernel_size = vt_config.merge_kernel_size
-        self.patch_size = vt_config.patch_size
-
         preprocessor = json.loads((k3_dir / "preprocessor_config.json").read_text())
-        self.processor = KimiK3VisionProcessor.from_dict(preprocessor)
-
-    def n_visual_tokens(self, grid_thws: torch.Tensor) -> int:
-        """Return the merged token count for the first image in ``grid_thws``."""
-
-        _, height, width = (int(v) for v in grid_thws[0].tolist())
-        kernel_h, kernel_w = self.merge_kernel_size
-        return (height // kernel_h) * (width // kernel_w)
-
-    def preprocess(self, images: Sequence[Image.Image]) -> tuple[torch.Tensor, torch.Tensor]:
-        medias = [{"type": "image", "image": image.convert("RGB")} for image in images]
-        batch = self.processor.preprocess(medias, return_tensors="pt")
-        pixel_values = batch["pixel_values"].to(device=self.device, dtype=self.dtype)
-        grid_thws = batch["grid_thws"].to(device=self.device)
-        return pixel_values, grid_thws
-
-    def encode(self, images: Sequence[Image.Image]) -> torch.Tensor:
-        """Encode images one at a time and stack the merged features.
-
-        The vendored eager attention builds a full ``(L, L)`` mask over the
-        packed token sequence, so a multi-image batch would be quadratic in the
-        total token count. One image per forward keeps the path within memory;
-        the output is still ``(batch, tokens, 4096)``.
-        """
-
-        outputs = []
-        for image in images:
-            pixel_values, grid_thws = self.preprocess([image])
-            with torch.no_grad():
-                features = self.model(pixel_values, grid_thws)
-            outputs.append(features[0].reshape(features[0].shape[0], -1))
-        return torch.stack(outputs, dim=0)
+        processor = KimiK3VisionProcessor.from_dict(preprocessor)
+        super().__init__(
+            model,
+            processor,
+            vt_config.merge_kernel_size,
+            vt_config.patch_size,
+            device=device,
+            dtype=dtype,
+        )
