@@ -1,0 +1,2 @@
+{"event": "wp7_unit", "passed": 8}
+{"cpu_seconds": 64.9, "event": "wp7_integration", "passed": 1, "peak_rss_mb": 3137.8}
