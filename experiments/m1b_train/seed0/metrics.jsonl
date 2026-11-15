@@ -1,0 +1,1 @@
+{"elapsed_s": 5186.31, "event": "m1b", "final_loss": 5.024851500988007, "g1_pass": false, "max_gpu_memory_mb": 32361.2, "max_steps": 2048, "micro_batch": 16, "peak_rss_mb": 9526.4, "seed": 0}
