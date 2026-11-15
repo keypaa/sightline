@@ -46,6 +46,23 @@ def test_metrics_jsonl_roundtrip(tmp_path: Path) -> None:
     assert json.loads(lines[1])["loss"] == 0.5
 
 
+def test_runtime_and_chat_template_overrides(tmp_path: Path) -> None:
+    rec = RunRecord(
+        root=tmp_path,
+        dry_run=True,
+        runtime={"reader_hidden_size": 2048, "projector_hidden_width": 2048},
+        chat_template={
+            "tokenizer_sha256": "t",
+            "rendered_sha256": "r",
+            "enable_thinking": False,
+        },
+    )
+    data = json.loads(rec.write().read_text())
+    assert data["runtime"]["reader_hidden_size"] == 2048
+    assert data["config"]["runtime"]["reader_hidden_size"] == 2048
+    assert data["chat_template"]["rendered_sha256"] == "r"
+
+
 def test_git_state_has_commit_branch_and_dirty() -> None:
     root = Path(__file__).resolve().parents[2]
     state = git_state(root)

@@ -95,10 +95,14 @@ class RunRecord:
         config: dict[str, Any] | None = None,
         run_id: str | None = None,
         repo: str | Path | None = None,
+        runtime: dict[str, Any] | None = None,
+        chat_template: dict[str, Any] | None = None,
     ) -> None:
         self.root = Path(root)
         self.dry_run = dry_run
         self.config = config if config is not None else resolve_config(Config())
+        self.runtime = runtime
+        self.chat_template = chat_template
         self.repo = find_repo(Path(repo) if repo is not None else Path.cwd())
         self.run_id = run_id or make_run_id(self.repo)
         self.run_path = self.root / "run.json"
@@ -108,14 +112,17 @@ class RunRecord:
         reader = self.config["reader"]
         encoder = self.config["encoder"]
         training = self.config["training"]
+        config = dict(self.config)
+        if self.runtime is not None:
+            config["runtime"] = self.runtime
         return {
             "schema_version": SCHEMA_VERSION,
             "run_id": self.run_id,
             "created_utc": datetime.now(UTC).isoformat(),
             "dry_run": self.dry_run,
             "code": git_state(self.repo),
-            "config": self.config,
-            "runtime": self.config["runtime"],
+            "config": config,
+            "runtime": config["runtime"],
             "models": {
                 "reader": {
                     "model_id": reader["model_id"],
@@ -129,7 +136,9 @@ class RunRecord:
                     "dtype": encoder["dtype"],
                 },
             },
-            "chat_template": {
+            "chat_template": self.chat_template
+            if self.chat_template is not None
+            else {
                 "tokenizer_sha256": None,
                 "rendered_sha256": None,
                 "enable_thinking": False,
