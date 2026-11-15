@@ -25,6 +25,8 @@ The full `modeling_kimi_k3.py` imports `modeling_kimi_linear.py`, which imports 
 - The tower output for that image is `(256, 4, 1024)`; the wrapper flattens it to `(256, 4096)`. [V]
 - One-image fp32 forward peaks at 3.13 GB RSS. [V]
 - The 20-image slow test passes with one image per forward: 6 tests, peak 3.14 GB. The run is CPU-bound and uses all 6 CPU cores; wall time was not recorded. [V]
+- The owner ran the comparison against `keypa/MoonViT-V2-Standalone`: all 165 tower tensors are byte-identical. [V, owner]
+- The extracted tower is published at `keypa/MoonViT-V2-K3-f831ab66` (repo sha `a62a3622248bc80e0c52504d459dd7918e66d072`, file 894,737,840 bytes). Upload: 8.8 s, peak RSS 825 MB, 4.4 CPU-s. [V]
 
 ## Consequences
 The official tower code is used, not rewritten. The K3 LM is not vendored. The eager attention path is quadratic in packed tokens, so the wrapper runs one image per forward. The 20-image parity test is marked slow and skipped by default; set `SIGHTLINE_VISION_IMAGE_COUNT` to run fewer images.
