@@ -1,0 +1,5 @@
+{"event": "wp8_tests", "passed": 10}
+{"compared": 10, "event": "resume", "steps": 100, "tolerance": 1e-06}
+{"event": "determinism", "steps": 5}
+{"atol": 1e-05, "event": "gradient_accumulation", "full": 8, "micro": [4, 4]}
+{"cpu_s": 238.4, "elapsed_s": 86.7, "event": "full_suite", "passed": 67, "peak_rss_mb": 13165.5}
