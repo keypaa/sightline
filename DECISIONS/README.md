@@ -25,3 +25,4 @@ One short dated file per decision, named `NNNN-short-title.md` and based on `_te
 | 0017 | K2.6 MoonViT extraction and vendoring | WP6 |
 | 0018 | K2.6 parity tolerance | WP6 |
 | 0019 | Modal is a test harness, not production | WP6 |
+| 0020 | Generation path | WP3 |
