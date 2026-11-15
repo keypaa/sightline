@@ -117,6 +117,30 @@ def generate_answer(model, tok, projector, prompt_ids, features, device):
     return tok.decode(generated[0], skip_special_tokens=True).strip().lower().strip(" .!")
 
 
+def build_prompt(tok, example, device):
+    text = tok.apply_chat_template(
+        [{"role": "user", "content": "<|image_pad|>" * 256 + example.question}],
+        add_generation_prompt=True,
+        enable_thinking=False,
+        tokenize=False,
+    )
+    return tok(text, return_tensors="pt")["input_ids"].to(device)
+
+
+def debug_generations(model, tok, encoder, projector, examples, device, n) -> None:
+    """Print what the model actually says, to tell a decode bug from a mapping bug."""
+
+    examples = examples[:n]
+    features = torch.cat([encoder.encode([e.image]) for e in examples], dim=0)
+    for i, example in enumerate(examples):
+        prompt_ids = build_prompt(tok, example, device)
+        answer = generate_answer(model, tok, projector, prompt_ids, features[i : i + 1], device)
+        print(
+            f"[{example.task}] expected={example.answer!r} got={answer!r} "
+            f"q={example.question[:70]!r}"
+        )
+
+
 def chance_rates(examples) -> dict[str, float]:
     """Guessing rate per task, from the distinct answers the test split contains."""
 
@@ -230,6 +254,24 @@ def main() -> int:
         action="store_true",
         help="project the vocabulary at every position; baseline for the logits-trim optimization",
     )
+    parser.add_argument(
+        "--eval-split",
+        choices=("train", "val", "test"),
+        default="test",
+        help="which split to evaluate; train is the diagnostic for memorisation",
+    )
+    parser.add_argument(
+        "--eval-limit",
+        type=int,
+        default=None,
+        help="evaluate only the first N examples of the split",
+    )
+    parser.add_argument(
+        "--debug-generations",
+        type=int,
+        default=0,
+        help="print N expected-vs-generated answers and exit; no full evaluation",
+    )
     args = parser.parse_args()
 
     if not torch.cuda.is_available():
@@ -339,13 +381,25 @@ def main() -> int:
         trainer.train(max_steps=args.max_steps)
         trainer.save_checkpoint(checkpoint)
 
-    eval_result = evaluate(model, tok, encoder, trainer.projector, dataset.test, "cuda")
+    split = getattr(dataset, args.eval_split)
+    if args.eval_limit is not None:
+        split = split[: args.eval_limit]
+
+    if args.debug_generations:
+        debug_generations(
+            model, tok, encoder, trainer.projector, split, "cuda", args.debug_generations
+        )
+        return 0
+
+    eval_result = evaluate(model, tok, encoder, trainer.projector, split, "cuda")
     usage = resource.getrusage(resource.RUSAGE_SELF)
     summary = {
         "seed": args.seed,
         "max_steps": args.max_steps,
         "micro_batch": args.micro_batch,
         "trim_logits": not args.no_trim_logits,
+        "eval_split": args.eval_split,
+        "eval_limit": args.eval_limit,
         "final_loss": trainer.losses[-1] if trainer.losses else None,
         "loss_every_100": trainer.losses[::100] if trainer.losses else [],
         "eval": eval_result,
