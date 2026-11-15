@@ -12,4 +12,14 @@ modal run modal/wp6_parity.py -- --resolutions 448 672 896 --count 20
 
 Sizing: **T4 GPU, 4 CPU, 8 GB RAM**. Bump to 16 GB or A10G only if the run OOMs or hits a compatibility issue. The function returns elapsed time, peak RSS, CPU seconds, peak GPU memory and per-image max-abs / max-rel / cosine / allclose metrics.
 
-The image installs the cu130 torch build, mounts `src/` and the extracted K2.6 tower, and downloads the community reference from Hugging Face at run time. The Modal token stays in the CLI profile; it is not stored here.
+The image installs the cu130 torch build, mounts `src/` and the extracted K2.6 tower, and downloads the community reference from Hugging Face at run time. ## WP10 overfit
+
+`wp10_overfit.py` trains the WP7 projector on the 32 WP9 scenes against the frozen Qwen3-1.7B reader and the frozen K3 MoonViT-V2 tower.
+
+```bash
+python3 modal/wp10_overfit.py --seed 0
+```
+
+It runs on **A10G (24 GB)**: the T4 OOMs at micro-batch 8 (13.75 GiB) and micro-batch 4 (13.24 GiB). The A10G fits micro-batch 8. The function returns the exact match, blank/shuffled/swapped controls, answer loss gap, per-step loss, elapsed time and memory.
+
+The Modal token stays in the CLI profile; it is not stored here.

@@ -30,3 +30,5 @@ One short dated file per decision, named `NNNN-short-title.md` and based on `_te
 | 0022 | Projector shape and norm ratio | WP7 |
 | 0023 | Training loop, checkpoint and resume | WP8 |
 | 0024 | Minimal synthetic data | WP9 |
+| 0025 | 32-example overfit pass rule and control thresholds | WP10 |
+| 0026 | WP10 overfit runs on A10G | WP10 |

@@ -26,6 +26,7 @@ class Batch:
     input_ids: torch.Tensor
     features: torch.Tensor
     labels: torch.Tensor
+    attention_mask: torch.Tensor | None = None
 
 
 class Trainer:
@@ -57,8 +58,9 @@ class Trainer:
         self.placeholder_id = placeholder_id
         self.device = torch.device(device)
         self.dtype = dtype
+        self.projector = projector.to(self.device)
         self.optimizer = torch.optim.AdamW(
-            projector.parameters(),
+            self.projector.parameters(),
             lr=base_lr,
             betas=betas,
             weight_decay=weight_decay,
@@ -88,7 +90,9 @@ class Trainer:
                 embed = self.model.get_input_embeddings()
                 visual = self.projector(features)
                 spliced = splice(input_ids, visual, self.placeholder_id, embed.weight)
-                logits = self.model(inputs_embeds=spliced).logits
+                logits = self.model(
+                    inputs_embeds=spliced, attention_mask=batch.attention_mask
+                ).logits
                 loss = answer_only_loss(logits[:, :-1], labels[:, 1:])
                 (loss / self.micro_batches_per_step).backward()
                 total_loss += loss.item() / self.micro_batches_per_step
