@@ -24,7 +24,7 @@ The full `modeling_kimi_k3.py` imports `modeling_kimi_linear.py`, which imports 
 - A 448x448 image through the official `KimiK3VisionProcessor`: `pixel_values` shape `(1024, 3, 14, 14)`, `grid_thws` `[[1, 32, 32]]`. [V]
 - The tower output for that image is `(256, 4, 1024)`; the wrapper flattens it to `(256, 4096)`. [V]
 - One-image fp32 forward peaks at 3.13 GB RSS. [V]
-- The 20-image slow test passes with one image per forward: 6 tests, peak 3.14 GB. The run takes about 40 s and uses all 6 CPU cores. [V]
+- The 20-image slow test passes with one image per forward: 6 tests, peak 3.14 GB. The run is CPU-bound and uses all 6 CPU cores; wall time was not recorded. [V]
 
 ## Consequences
 The official tower code is used, not rewritten. The K3 LM is not vendored. The eager attention path is quadratic in packed tokens, so the wrapper runs one image per forward. The 20-image parity test is marked slow and skipped by default; set `SIGHTLINE_VISION_IMAGE_COUNT` to run fewer images.
