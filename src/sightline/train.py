@@ -10,8 +10,11 @@ from __future__ import annotations
 
 import random
 import time
+from collections import deque
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from statistics import median
 from typing import Any
 
 import numpy as np
@@ -48,6 +51,7 @@ class Trainer:
         device: str | torch.device = "cpu",
         dtype: torch.dtype = torch.float32,
         cycle: bool = False,
+        on_step: Callable[[dict[str, Any]], None] | None = None,
     ) -> None:
         self.model = model
         self.projector = projector
@@ -61,6 +65,8 @@ class Trainer:
         self.device = torch.device(device)
         self.dtype = dtype
         self.cycle = cycle
+        self.on_step = on_step
+        self.step_times: deque[float] = deque(maxlen=50)
         self.projector = projector.to(self.device)
         self.optimizer = torch.optim.AdamW(
             self.projector.parameters(),
@@ -76,6 +82,7 @@ class Trainer:
         self.losses: list[float] = []
 
     def train_step(self) -> None:
+        started = time.perf_counter()
         self.model.eval()
         self.projector.train()
         self.optimizer.zero_grad()
@@ -111,6 +118,17 @@ class Trainer:
         self.scheduler.step()
         self.losses.append(total_loss)
         self.step += 1
+        self.step_times.append(time.perf_counter() - started)
+        if self.on_step is not None:
+            self.on_step(
+                {
+                    "step": self.step,
+                    "loss": total_loss,
+                    "step_s": self.step_times[-1],
+                    "median_step_s": float(median(self.step_times)),
+                    "step_times": len(self.step_times),
+                }
+            )
 
     def train(self, max_steps: int | None = None) -> list[float]:
         if max_steps is None:
@@ -175,12 +193,13 @@ class Trainer:
         self.scheduler.load_state_dict(state["scheduler"])
         self.step = state["step"]
 
-        rng = state["rng"]
-        torch.set_rng_state(rng["torch"])
-        if rng["cuda"] is not None and torch.cuda.is_available():
-            torch.cuda.set_rng_state(rng["cuda"])
-        np.random.set_state(rng["numpy"])
-        random.setstate(rng["random"])
+        rng = state.get("rng") if isinstance(state, dict) else None
+        if rng is not None:
+            torch.set_rng_state(rng["torch"])
+            if rng["cuda"] is not None and torch.cuda.is_available():
+                torch.cuda.set_rng_state(rng["cuda"])
+            np.random.set_state(rng["numpy"])
+            random.setstate(rng["random"])
 
     def save_checkpoint(self, path: str | Path) -> None:
         torch.save(self.state_dict(), path)

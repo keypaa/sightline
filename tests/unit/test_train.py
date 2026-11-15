@@ -201,3 +201,41 @@ def test_probe_reports_step_time_and_memory() -> None:
 
     with pytest.raises(ValueError):
         trainer.probe(0)
+
+
+def test_on_step_callback_reports_progress() -> None:
+    model = tiny_model()
+    batches = make_batches(seed=7, n_micro=4)
+    seen: list[dict] = []
+
+    trainer = make_trainer(model, batches)
+    trainer.cycle = True
+    trainer.on_step = seen.append
+    trainer.train(max_steps=3)
+
+    assert [s["step"] for s in seen] == [1, 2, 3]
+    assert all(math.isfinite(s["loss"]) for s in seen)
+    assert all(s["step_s"] > 0.0 for s in seen)
+    assert [s["step_times"] for s in seen] == [1, 2, 3]
+    assert len(trainer.step_times) == 3
+
+
+def test_load_state_dict_accepts_a_checkpoint_without_rng() -> None:
+    model = tiny_model()
+    batches = make_batches(seed=8, n_micro=4)
+    donor = make_trainer(model, batches)
+    donor.cycle = True
+    donor.train(max_steps=2)
+    state = {k: v for k, v in donor.state_dict().items() if k != "rng"}
+
+    fresh = make_trainer(model, batches)
+    fresh.cycle = True
+    fresh.load_state_dict(state)
+
+    assert fresh.step == 2
+    for trained, restored in zip(
+        donor.projector.state_dict().values(),
+        fresh.projector.state_dict().values(),
+        strict=True,
+    ):
+        assert torch.equal(trained, restored)

@@ -4,7 +4,13 @@
 Usage:
     python tools/run_m1.py --seed 0 --max-steps 2048 --micro-batch 16
     python tools/run_m1.py --seed 0 --probe-steps 20 --micro-batch 16
+    python tools/run_m1.py --seed 0 --resume
     python tools/run_m1.py --seed 0 --eval-only
+
+A progress line (step, percentage, loss, median step time, elapsed, ETA) is
+printed every --progress-every steps. --resume continues from the checkpoint on
+disk, so an interrupted run picks up where it stopped; the checkpoint holds the
+projector, optimizer, scheduler, step and RNG states.
 
 Settings are the Baseten reference: global batch 128, AdamW (0.9, 0.95),
 weight decay 0.1, LR 3e-4, warmup 50, 2048 steps, bf16 autocast, fp32
@@ -33,6 +39,7 @@ from sightline.config import Config, resolve_config
 from sightline.data.m1_synthetic import generate_m1_dataset
 from sightline.evaluate import g1_pass, g1_report
 from sightline.generate import generate_new_tokens
+from sightline.progress import ProgressPrinter
 from sightline.projector import Projector
 from sightline.record import RunRecord
 from sightline.train import Batch, Trainer
@@ -197,6 +204,17 @@ def main() -> int:
         default=None,
         help="time N steps (plus 2 untimed warmup) and exit; writes no checkpoint",
     )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="continue from artifacts/m1b/seed<seed>/projector.pt instead of restarting",
+    )
+    parser.add_argument(
+        "--progress-every",
+        type=int,
+        default=10,
+        help="print a progress line every N steps (0 silences)",
+    )
     args = parser.parse_args()
 
     if not torch.cuda.is_available():
@@ -244,6 +262,14 @@ def main() -> int:
 
     started = time.perf_counter()
     checkpoint = Path(f"artifacts/m1b/seed{args.seed}/projector.pt")
+    progress = ProgressPrinter(
+        total=args.max_steps, every=args.progress_every, label=f"[seed {args.seed}]"
+    )
+    train_started = time.perf_counter()
+    trainer.on_step = lambda info: progress(
+        {**info, "elapsed_s": time.perf_counter() - train_started}
+    )
+
     if args.probe_steps is not None:
         probe = trainer.probe(args.probe_steps)
         usage = resource.getrusage(resource.RUSAGE_SELF)
@@ -274,18 +300,18 @@ def main() -> int:
         state = torch.load(checkpoint, weights_only=False)
         trainer.projector.load_state_dict(state["projector"])
         trainer.step = state["step"]
+    elif args.resume:
+        if not checkpoint.exists():
+            raise SystemExit(f"--resume but no checkpoint at {checkpoint}")
+        trainer.load_state_dict(torch.load(checkpoint, weights_only=False))
+        print(f"resumed at step {trainer.step}/{args.max_steps}", flush=True)
+        trainer.train(max_steps=args.max_steps)
+        checkpoint.parent.mkdir(parents=True, exist_ok=True)
+        torch.save(trainer.state_dict(), checkpoint)
     else:
         trainer.train(max_steps=args.max_steps)
         checkpoint.parent.mkdir(parents=True, exist_ok=True)
-        torch.save(
-            {
-                "projector": trainer.projector.state_dict(),
-                "optimizer": trainer.optimizer.state_dict(),
-                "scheduler": trainer.scheduler.state_dict(),
-                "step": trainer.step,
-            },
-            checkpoint,
-        )
+        torch.save(trainer.state_dict(), checkpoint)
 
     eval_result = evaluate(model, tok, encoder, trainer.projector, dataset.test, "cuda")
     usage = resource.getrusage(resource.RUSAGE_SELF)
@@ -329,8 +355,27 @@ def main() -> int:
             "max_gpu_memory_mb": summary["max_gpu_memory_mb"],
         }
     )
+    record.append_metric(
+        {
+            "event": "g1",
+            "seed": args.seed,
+            "g1_pass": eval_result["g1_pass"],
+            "report": eval_result["report"],
+        }
+    )
+    record.append_metric(
+        {"event": "g1_raw", "seed": args.seed, "per_task": eval_result["per_task"]}
+    )
 
-    print(json.dumps(summary, indent=2))
+    print(
+        json.dumps(
+            {
+                **summary,
+                "eval": {"report": eval_result["report"], "g1_pass": eval_result["g1_pass"]},
+            },
+            indent=2,
+        )
+    )
     return 0
 
 
