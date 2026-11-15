@@ -36,3 +36,4 @@ One short dated file per decision, named `NNNN-short-title.md` and based on `_te
 | 0028 | Chunked-prefill tolerance | WP11 |
 | 0029 | K2.6 MoonViT-3D extraction on HF | WP6 |
 | 0030 | M1 synthetic data balance and splits | M1a |
+| 0031 | M1 training recipe and Modal sizing | M1b |

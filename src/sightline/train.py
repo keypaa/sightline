@@ -46,6 +46,7 @@ class Trainer:
         placeholder_id: int,
         device: str | torch.device = "cpu",
         dtype: torch.dtype = torch.float32,
+        cycle: bool = False,
     ) -> None:
         self.model = model
         self.projector = projector
@@ -58,6 +59,7 @@ class Trainer:
         self.placeholder_id = placeholder_id
         self.device = torch.device(device)
         self.dtype = dtype
+        self.cycle = cycle
         self.projector = projector.to(self.device)
         self.optimizer = torch.optim.AdamW(
             self.projector.parameters(),
@@ -79,11 +81,17 @@ class Trainer:
 
         total_loss = 0.0
         start = self.step * self.micro_batches_per_step
+        if self.cycle:
+            start = start % len(self.batches)
+            indices = [(start + i) % len(self.batches) for i in range(self.micro_batches_per_step)]
+        else:
+            indices = range(start, start + self.micro_batches_per_step)
         autocast_enabled = self.dtype == torch.bfloat16 and self.device.type == "cuda"
         with torch.autocast(
             device_type=self.device.type, dtype=torch.bfloat16, enabled=autocast_enabled
         ):
-            for batch in self.batches[start : start + self.micro_batches_per_step]:
+            for idx in indices:
+                batch = self.batches[idx]
                 input_ids = batch.input_ids.to(self.device)
                 features = batch.features.to(self.device)
                 labels = batch.labels.to(self.device)

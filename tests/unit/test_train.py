@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from pathlib import Path
 
 import pytest
@@ -154,3 +155,27 @@ def test_gradient_accumulation_matches_single_batch() -> None:
     accumulated_grad = accumulated_projector.fc1.weight.grad.clone()
 
     assert torch.allclose(single_grad, accumulated_grad, atol=1e-5)
+
+
+def test_cycle_reuses_batches() -> None:
+    model = tiny_model()
+    projector = Projector(input_width=HIDDEN, reader_width=HIDDEN)
+    batches = make_batches(seed=3, n_micro=2)
+    trainer = Trainer(
+        model,
+        projector,
+        batches,
+        micro_batches_per_step=2,
+        base_lr=1e-3,
+        warmup_steps=0,
+        max_steps=4,
+        weight_decay=0.0,
+        betas=(0.9, 0.95),
+        grad_clip=1.0,
+        placeholder_id=PLACEHOLDER,
+        cycle=True,
+    )
+    trainer.train(max_steps=4)
+    assert trainer.step == 4
+    assert len(trainer.losses) == 4
+    assert all(math.isfinite(loss) for loss in trainer.losses)

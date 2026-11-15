@@ -30,4 +30,15 @@ It runs on **A10G (24 GB)**: the T4 OOMs at micro-batch 8 (13.75 GiB) and micro-
 python3 modal/conformance.py
 ```
 
+## M1 training
+
+`m1_train.py` trains the projector on the M1 synthetic data (Baseten recipe, 2048 steps) on an **A10G**. The T4 OOMs at micro-batch 8 and 4.
+
+```bash
+python3 modal/m1_train.py --seed 0 --calibrate   # 5-step calibration
+python3 modal/m1_train.py --seed 0               # full 2048 steps
+```
+
+The function returns elapsed time, peak RSS, CPU seconds, peak GPU memory and per-100-step losses. Checkpoints go to the `sightline-m1` Modal Volume.
+
 The Modal token stays in the CLI profile; it is not stored here.
