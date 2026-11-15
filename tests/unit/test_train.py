@@ -276,17 +276,17 @@ def test_trimmed_logits_are_shorter_than_the_sequence() -> None:
     trainer.cycle = True
     trainer.trim_logits = True
 
-    batch = batches[0]
-    labels = batch.labels
+    labels = batches[0].labels
     supervised = int((labels != -100).sum(dim=1).max())
 
     captured = {}
     original = trainer._logits
 
-    def spy(spliced, attention_mask, labels):
-        out = original(spliced, attention_mask, labels)
+    def spy(spliced, attention_mask, labels, n_supervised=None):
+        out = original(spliced, attention_mask, labels, n_supervised)
         captured["seq"] = spliced.shape[1]
         captured["logits"] = out.shape[1]
+        captured["n_supervised"] = n_supervised
         return out
 
     trainer._logits = spy
@@ -294,6 +294,32 @@ def test_trimmed_logits_are_shorter_than_the_sequence() -> None:
 
     assert captured["logits"] == supervised + 1
     assert captured["logits"] < captured["seq"]
+
+
+def test_batch_level_answer_length_avoids_a_device_sync() -> None:
+    """n_supervised is computed on the host, so training never reads the labels."""
+
+    model = tiny_model()
+    batches = [
+        Batch(b.input_ids, b.features, b.labels, n_supervised=2)
+        for b in make_batches(seed=13, n_micro=2)
+    ]
+
+    trainer = make_trainer(model, batches)
+    trainer.cycle = True
+    trainer.trim_logits = True
+
+    captured = {}
+    original = trainer._logits
+
+    def spy(spliced, attention_mask, labels, n_supervised=None):
+        captured["n_supervised"] = n_supervised
+        return original(spliced, attention_mask, labels, n_supervised)
+
+    trainer._logits = spy
+    trainer.train_step()
+
+    assert captured["n_supervised"] == 2
 
 
 def test_save_checkpoint_is_atomic(tmp_path: Path) -> None:

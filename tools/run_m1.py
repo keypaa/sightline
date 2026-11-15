@@ -89,10 +89,14 @@ def build_batches(examples, features, tok, device, micro_batch):
         singles.append(Batch(train_ids, features[i : i + 1], labels))
 
     def merge(part):
+        input_ids = torch.cat([b.input_ids for b in part], dim=0)
+        features = torch.cat([b.features for b in part], dim=0)
+        labels = torch.cat([b.labels for b in part], dim=0)
         return Batch(
-            torch.cat([b.input_ids for b in part], dim=0),
-            torch.cat([b.features for b in part], dim=0),
-            torch.cat([b.labels for b in part], dim=0),
+            input_ids,
+            features,
+            labels,
+            n_supervised=int((labels != -100).sum(dim=1).max()) if len(labels) else 0,
         )
 
     return [merge(singles[i : i + micro_batch]) for i in range(0, len(singles), micro_batch)]

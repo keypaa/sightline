@@ -31,6 +31,7 @@ class Batch:
     features: torch.Tensor
     labels: torch.Tensor
     attention_mask: torch.Tensor | None = None
+    n_supervised: int | None = None
 
 
 class Trainer:
@@ -108,7 +109,7 @@ class Trainer:
                 embed = self.model.get_input_embeddings()
                 visual = self.projector(features)
                 spliced = splice(input_ids, visual, self.placeholder_id, embed.weight)
-                logits = self._logits(spliced, batch.attention_mask, labels)
+                logits = self._logits(spliced, batch.attention_mask, labels, batch.n_supervised)
                 loss = answer_only_loss(
                     logits[:, :-1], labels[:, labels.shape[1] - (logits.shape[1] - 1) :]
                 )
@@ -140,7 +141,11 @@ class Trainer:
         return self.losses
 
     def _logits(
-        self, spliced: torch.Tensor, attention_mask: torch.Tensor | None, labels: torch.Tensor
+        self,
+        spliced: torch.Tensor,
+        attention_mask: torch.Tensor | None,
+        labels: torch.Tensor,
+        n_supervised: int | None = None,
     ) -> torch.Tensor:
         """Reader logits, trimmed to the positions that can be supervised.
 
@@ -148,13 +153,19 @@ class Trainer:
         every position costs a [batch, seq, vocab] tensor for nothing. With
         ``logits_to_keep`` the reader computes the last k+1 positions, which is
         where the k supervised targets are predicted from.
+
+        ``n_supervised`` is passed in from the batch, which was built on the
+        host, so the common path never reads a device tensor and never syncs.
+        Reading it off the labels is only a fallback for callers that build
+        batches themselves.
         """
 
         keep = 0
         if self.trim_logits:
-            supervised = int((labels != IGNORE_INDEX).sum(dim=1).max())
-            if supervised:
-                keep = min(supervised + 1, labels.shape[1])
+            if n_supervised is None:
+                n_supervised = int((labels != IGNORE_INDEX).sum(dim=1).max())
+            if n_supervised:
+                keep = min(n_supervised + 1, labels.shape[1])
         return self.model(
             inputs_embeds=spliced, attention_mask=attention_mask, logits_to_keep=keep
         ).logits
