@@ -17,8 +17,8 @@ dist/
 hf_token*
 
 # Weights, checkpoints and bulk data are never committed
-artifacts/
-data/
+/artifacts/
+/data/
 cache/
 wandb/
 *.safetensors
