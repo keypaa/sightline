@@ -40,9 +40,7 @@ def test_inputs_embeds_generation_returns_only_new_tokens() -> None:
     embed = model.get_input_embeddings()
     spliced = splice(ids, embed(ids[:, 2:3]), PLACEHOLDER, embed.weight)
 
-    from_ids = generate_new_tokens(
-        model, input_ids=ids, max_new_tokens=5, pad_token_id=0
-    )
+    from_ids = generate_new_tokens(model, input_ids=ids, max_new_tokens=5, pad_token_id=0)
     from_embeds = generate_new_tokens(
         model,
         inputs_embeds=spliced,
@@ -74,9 +72,7 @@ def test_golden_splice_generation_matches_ids() -> None:
     visual = embed(ids[:, 2:3])
     spliced = splice(ids, visual, PLACEHOLDER, embed.weight)
 
-    from_ids = generate_new_tokens(
-        model, input_ids=ids, max_new_tokens=5, pad_token_id=0
-    )
+    from_ids = generate_new_tokens(model, input_ids=ids, max_new_tokens=5, pad_token_id=0)
     from_embeds = generate_new_tokens(
         model,
         inputs_embeds=spliced,
@@ -104,7 +100,5 @@ def test_generation_padding_invariance() -> None:
         max_new_tokens=5,
         pad_token_id=0,
     )
-    single = generate_new_tokens(
-        model, input_ids=ids_a, max_new_tokens=5, pad_token_id=0
-    )
+    single = generate_new_tokens(model, input_ids=ids_a, max_new_tokens=5, pad_token_id=0)
     assert torch.equal(batched[0], single[0])

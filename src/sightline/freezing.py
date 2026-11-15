@@ -25,15 +25,7 @@ def trainable_parameters(module: nn.Module) -> list[nn.Parameter]:
 def parameter_hashes(module: nn.Module) -> dict[str, str]:
     hashes: dict[str, str] = {}
     for name, parameter in module.named_parameters():
-        raw = (
-            parameter.detach()
-            .cpu()
-            .contiguous()
-            .reshape(-1)
-            .view(torch.uint8)
-            .numpy()
-            .tobytes()
-        )
+        raw = parameter.detach().cpu().contiguous().reshape(-1).view(torch.uint8).numpy().tobytes()
         hashes[name] = hashlib.sha256(raw).hexdigest()
     return hashes
 
@@ -44,6 +36,4 @@ def assert_frozen(module: nn.Module, before: dict[str, str]) -> None:
         return
     changed = [name for name in before if before[name] != after.get(name)]
     missing = [name for name in before if name not in after]
-    raise AssertionError(
-        f"frozen parameters changed: {changed[:5]}; missing: {missing[:5]}"
-    )
+    raise AssertionError(f"frozen parameters changed: {changed[:5]}; missing: {missing[:5]}")
