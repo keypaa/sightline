@@ -117,6 +117,20 @@ def generate_answer(model, tok, projector, prompt_ids, features, device):
     return tok.decode(generated[0], skip_special_tokens=True).strip().lower().strip(" .!")
 
 
+def sample_evenly(items: list, n: int | None) -> list:
+    """Take n items spread across the list.
+
+    The M1 splits are ordered by answer (all reds, then greens, ...), so the
+    first n items are a biased sample: a model that always answers "red" scores
+    n/n on them and at chance overall. A stride keeps the answer mix.
+    """
+
+    if n is None or n >= len(items):
+        return items
+    step = len(items) / n
+    return [items[int(i * step)] for i in range(n)]
+
+
 def build_prompt(tok, example, device):
     text = tok.apply_chat_template(
         [{"role": "user", "content": "<|image_pad|>" * 256 + example.question}],
@@ -128,9 +142,13 @@ def build_prompt(tok, example, device):
 
 
 def debug_generations(model, tok, encoder, projector, examples, device, n) -> None:
-    """Print what the model actually says, to tell a decode bug from a mapping bug."""
+    """Print what the model actually says, to tell a decode bug from a mapping bug.
 
-    examples = examples[:n]
+    The examples are sampled evenly (see ``sample_evenly``): the first n of a
+    split are all one answer, which flatters a model with a colour prior.
+    """
+
+    examples = sample_evenly(list(examples), n)
     features = torch.cat([encoder.encode([e.image]) for e in examples], dim=0)
     for i, example in enumerate(examples):
         prompt_ids = build_prompt(tok, example, device)
@@ -381,9 +399,7 @@ def main() -> int:
         trainer.train(max_steps=args.max_steps)
         trainer.save_checkpoint(checkpoint)
 
-    split = getattr(dataset, args.eval_split)
-    if args.eval_limit is not None:
-        split = split[: args.eval_limit]
+    split = sample_evenly(list(getattr(dataset, args.eval_split)), args.eval_limit)
 
     if args.debug_generations:
         debug_generations(
