@@ -16,10 +16,10 @@ M0's G0 gate requires the golden splice, generation parity, parameter test, 32-e
 - Report: `reports/g0.md`.
 
 ## Decision
-Proposed: G0 is signed off. The owner approves by marking this entry accepted; M1 starts only after that.
+G0 is signed off. Approved by Keylhan Paumard--André on 2026-11-15. M1 may start.
 
 ## Consequences
-M0 is complete; M1 (synthetic recognition) can start after the owner signs.
+M0 is complete. M1 (synthetic recognition) may start.
 
 ## Open items
 - [U] bf16 golden-splice and FA2-vs-eager on the RTX PRO 6000 (batched GPU session). Owner: implementation agent. Closing step: GPU box.
