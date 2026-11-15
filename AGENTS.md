@@ -6,7 +6,7 @@ Instructions for any coding agent working in this repository (Claude Code, Codex
 
 Sightline is a clean-break research repository on post-hoc visual retrofitting: attach a frozen vision encoder (Kimi MoonViT) to a frozen text-only LLM through a small trainable projector, then measure honestly what vision capability results. Long-term target: Kimi K3's MoonViT-V2 to DeepSeek-V4-Flash-0731. The owner is learning, so understanding and honest evidence matter more than speed or headline numbers.
 
-**Current stage: M0 only** (plumbing, Qwen3-1.7B reader). Do not start M1 until the G0 report is signed off in DECISIONS/.
+**Current stage: M0 complete** (G0 signed off 2026-11-15 in DECISIONS/0027). M1 (synthetic recognition) is next.
 
 ## Where things are written down
 
@@ -98,6 +98,9 @@ reports/            generated reports (small, diffable)
 - GPU check: `python -c "import torch; print(torch.cuda.get_arch_list(), torch.cuda.is_available())"`.
 - K2.6 extraction: `python tools/extract_k3_vision.py --repo moonshotai/Kimi-K2.6 --revision 7eb5002f6aadc958aed6a9177b7ed26bb94011bb --prefixes vision_tower.,mm_projector. --expect-tower 329 --expect-projector 6 --out artifacts/k26_vision_7eb5002f.safetensors --manifest docs/manifests/k26_vision_7eb5002f.manifest.json`.
 - Modal parity: `python modal/wp6_parity.py --resolutions 448 672 896 --count 20`.
+- Modal overfit: `python3 modal/wp10_overfit.py --seed 0`.
+- Modal conformance: `python3 modal/conformance.py`.
+- Calibration: `python3 tools/calibrate_bf16_tolerance.py`.
 
 ## Style
 

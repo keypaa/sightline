@@ -1,6 +1,6 @@
 # Sightline M0: Plumbing task breakdown
 
-Companion to [Sightline: Project Document v1.0](https://claude.ai/artifact/LyNX5csUp6CtmmPcHpL72m) · updated 14 November 2026 · Evidence tags as in the main document: \[V\] verified, \[S\] secondary source, \[I\] my inference, \[U\] unknown.
+Companion to [Sightline: Project Document v1.0](https://claude.ai/artifact/LyNX5csUp6CtmmPcHpL72m) · updated 15 November 2026 · M0 complete · Evidence tags as in the main document: \[V\] verified, \[S\] secondary source, \[I\] my inference, \[U\] unknown.
 
 ## 1. What M0 is for
 
@@ -13,6 +13,8 @@ M0 proves the plumbing, not the science. When it ends, a frozen Qwen3-1.7B reade
 - The parameter test passes.
 - A 32-example overfit reaches 99% exact match within 500 steps.
 - The resume test passes.
+
+**Status (2026-11-15):** G0 passed; signed off in DECISIONS/0027.
 
 **Added since the first draft of the main document** (decisions of 10 to 13 November): the K2.6 MoonViT extraction with a forward-parity test, one injection card per reader, and the conformance suite in section 4. The palette tooling for DeepSeek V4 (make\_palette.py, palette\_cap3\_0731.json) is stored in the repo now and used in M5b.
 
@@ -78,6 +80,25 @@ Order: WP0, then WP1; WP2, WP5 and WP6 can run in parallel; then WP3, WP4, WP7, 
 | 10 | The 32-example overfit (G0) | 1 to 3 days, depending on bugs |
 | 11 | Conformance suite, cards, G0 report | 1 day |
 | 12 | DeepSeek V4 reading and tooling | 1 to 2 days, no GPU |
+
+## Status (2026-11-15)
+
+All WP0–WP11 are complete; G0 signed off in DECISIONS/0027. Tags: wp0-done … wp11-done.
+
+| WP | Tag | Result |
+| --- | --- | --- |
+| 0 | wp0-done | repository skeleton, config, run record |
+| 1 | wp1-done | Qwen3-1.7B pinned, injection card |
+| 2 | wp2-done | splice, positions, masks |
+| 3 | wp3-done | generation path and parity |
+| 4 | wp4-done | freezing and parameter test |
+| 5 | wp5-done | K3 MoonViT-V2 tower and parity |
+| 6 | wp6-done | K2.6 MoonViT extraction and parity |
+| 7 | wp7-done | projector |
+| 8 | wp8-done | training loop, checkpoint, resume |
+| 9 | wp9-done | 32-scene synthetic data |
+| 10 | wp10-done | 32-example overfit, 3/3 seeds |
+| 11 | wp11-done | conformance suite, G0 report, sign-off |
 
 ### WP0. Repository skeleton and environment
 

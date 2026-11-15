@@ -37,7 +37,7 @@ Gate definitions live in docs/sightline-project-document.md, section 9.4. Effort
 | M5c Hero | DeepSeek-V4-Flash-0731 plus native comparison rows | G8 |
 | M6 Optional | RL on a rendered-math task to restore reasoning | none yet |
 
-Current stage: M0.
+Current stage: M0 complete (G0 signed off 2026-11-15); M1 next.
 
 ## Honesty rules
 

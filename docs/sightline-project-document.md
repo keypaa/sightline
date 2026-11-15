@@ -4,6 +4,8 @@
 
 **Evidence tags.** **\[V\]** read on a primary page this session. **\[S\]** search snippet or third-party mirror only. **\[I\]** my inference or arithmetic. **\[U\]** unknown, check before relying on it. Numbers marked \[I\] or \[U\] are planning aids, not facts.
 
+**Status (2026-11-15):** M0 complete; G0 signed off in DECISIONS/0027. M1 next.
+
 ## 0. Summary
 
 Sightline is a research and learning project. The question: can a small trained projector give a frozen, text-only open-weight LLM useful vision, and where does that stop? The long-term target is DeepSeek-V4-Flash-0731 with a Kimi MoonViT-class encoder. The immediate goal is different and more important: after the first three milestones you should understand how a multimodal model is trained, with a pipeline you trust and results you can defend.
@@ -409,6 +411,8 @@ MMMU-Pro and BLINK, following Baseten’s protocol: generative evaluation with t
 | G7 Hero spike | M5b | Forward and backward to input embeddings works on one sample; throughput and memory are measured; a 32-example overfit decreases loss |
 | G8 Hero run | M5c | Vision-minus-blind CI excludes zero; comparison rows against Vision-Exp and V4.1 are filled |
 
+**G0 result (2026-11-15):** passed; see `reports/g0.md` and `DECISIONS/0027`.
+
 ### 9.5 Diagnostic guide
 
 | Symptom | Likely cause | First check |
@@ -437,6 +441,8 @@ MMMU-Pro and BLINK, following Baseten’s protocol: generative evaluation with t
 | M6 Optional | RL on a rendered-math task to restore reasoning (Baseten: 64 prompts × 8 samples, LR 1e-5, 150 updates) | The RL loop on a frozen reader; closest to RL and training-infrastructure work | none yet | 3+ weeks |
 
 At roughly 10 hours a week, M0 to M5c is about 6 to 7 months \[I\] (5 months before M2c was added and M5c was re-estimated at 6 to 9 weeks; the M0 breakdown now plans 2 to 3 weeks for M0). That assumption was answered in section 15: no fixed hours.
+
+**M0 complete (2026-11-15):** all WP0–WP11 done; tags wp0-done … wp11-done.
 
 **M0 task breakdown.** Work packages, the conformance suite, the debugging ladder and a kickoff prompt for the first coding session are in the companion document [Sightline M0: Plumbing task breakdown](https://claude.ai/artifact/8FHcv7ykwosmzLxj431don).
 
