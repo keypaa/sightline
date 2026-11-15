@@ -1,0 +1,3 @@
+{"event": "wp9_tests", "passed": 8}
+{"colors": 8, "event": "dataset", "manifest_sha256": "2fe44a9db59edcc6d215ced49d5a19e58d65a9ba242154275baae70e422ce1b7", "n": 32, "shapes": 4, "size": 448}
+{"cpu_s": 276.8, "elapsed_s": 74.3, "event": "full_suite", "passed": 75, "peak_rss_mb": 13143.5}
