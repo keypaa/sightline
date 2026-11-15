@@ -56,7 +56,7 @@ GLOBAL_BATCH = 128
     gpu="A10G",
     cpu=4.0,
     memory=16384,
-    timeout=25200,
+    timeout=50400,
     volumes={"/ckpt": volume},
 )
 def m1_train(
@@ -128,10 +128,7 @@ def m1_train(
             torch.cat([b.labels for b in part], dim=0),
         )
 
-    base = [
-        merge(singles[i : i + micro_batch])
-        for i in range(0, len(singles), micro_batch)
-    ]
+    base = [merge(singles[i : i + micro_batch]) for i in range(0, len(singles), micro_batch)]
     del singles, features
 
     torch.manual_seed(123)
@@ -167,9 +164,7 @@ def m1_train(
             "step_s": round(step_s, 3),
             "peak_rss_mb": round(usage.ru_maxrss / 1024, 1),
             "cpu_seconds": round(usage.ru_utime + usage.ru_stime, 1),
-            "max_gpu_memory_mb": round(
-                torch.cuda.max_memory_allocated() / 1024 / 1024, 1
-            )
+            "max_gpu_memory_mb": round(torch.cuda.max_memory_allocated() / 1024 / 1024, 1)
             if torch.cuda.is_available()
             else None,
             "elapsed_s": round(time.perf_counter() - started, 2),
@@ -200,9 +195,7 @@ def m1_train(
         "elapsed_s": round(time.perf_counter() - started, 2),
         "peak_rss_mb": round(usage.ru_maxrss / 1024, 1),
         "cpu_seconds": round(usage.ru_utime + usage.ru_stime, 1),
-        "max_gpu_memory_mb": round(
-            torch.cuda.max_memory_allocated() / 1024 / 1024, 1
-        )
+        "max_gpu_memory_mb": round(torch.cuda.max_memory_allocated() / 1024 / 1024, 1)
         if torch.cuda.is_available()
         else None,
     }
