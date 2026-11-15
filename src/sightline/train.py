@@ -202,7 +202,18 @@ class Trainer:
             random.setstate(rng["random"])
 
     def save_checkpoint(self, path: str | Path) -> None:
-        torch.save(self.state_dict(), path)
+        """Write a checkpoint atomically.
+
+        The state goes to a temporary file first and is then renamed, so an
+        interrupted save cannot leave a half-written checkpoint behind. This is
+        what makes periodic checkpointing safe to run during training.
+        """
+
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_name(path.name + ".tmp")
+        torch.save(self.state_dict(), tmp)
+        tmp.replace(path)
 
     def load_checkpoint(self, path: str | Path) -> None:
         self.load_state_dict(torch.load(path, weights_only=False))

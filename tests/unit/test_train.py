@@ -220,6 +220,24 @@ def test_on_step_callback_reports_progress() -> None:
     assert len(trainer.step_times) == 3
 
 
+def test_save_checkpoint_is_atomic(tmp_path: Path) -> None:
+    model = tiny_model()
+    batches = make_batches(seed=9, n_micro=4)
+    trainer = make_trainer(model, batches)
+    trainer.cycle = True
+    trainer.train(max_steps=2)
+
+    path = tmp_path / "nested" / "projector.pt"
+    trainer.save_checkpoint(path)
+
+    assert path.exists()
+    assert not (tmp_path / "nested" / "projector.pt.tmp").exists()
+
+    restored = make_trainer(model, batches)
+    restored.load_checkpoint(path)
+    assert restored.step == 2
+
+
 def test_load_state_dict_accepts_a_checkpoint_without_rng() -> None:
     model = tiny_model()
     batches = make_batches(seed=8, n_micro=4)

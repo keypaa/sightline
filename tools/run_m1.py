@@ -215,6 +215,12 @@ def main() -> int:
         default=10,
         help="print a progress line every N steps (0 silences)",
     )
+    parser.add_argument(
+        "--save-every",
+        type=int,
+        default=200,
+        help="write a checkpoint every N steps so --resume has a recent state (0 disables)",
+    )
     args = parser.parse_args()
 
     if not torch.cuda.is_available():
@@ -266,9 +272,19 @@ def main() -> int:
         total=args.max_steps, every=args.progress_every, label=f"[seed {args.seed}]"
     )
     train_started = time.perf_counter()
-    trainer.on_step = lambda info: progress(
-        {**info, "elapsed_s": time.perf_counter() - train_started}
-    )
+
+    def on_step(info: dict) -> None:
+        progress({**info, "elapsed_s": time.perf_counter() - train_started})
+        if (
+            args.save_every > 0
+            and info["step"] % args.save_every == 0
+            and info["step"] != args.max_steps
+        ):
+            trainer.save_checkpoint(checkpoint)
+            print(
+                f"[seed {args.seed}]  checkpoint at step {info['step']}/{args.max_steps}",
+                flush=True,
+            )
 
     if args.probe_steps is not None:
         probe = trainer.probe(args.probe_steps)
@@ -296,6 +312,7 @@ def main() -> int:
         print(json.dumps(probe, indent=2))
         return 0
 
+    trainer.on_step = on_step
     if args.eval_only:
         state = torch.load(checkpoint, weights_only=False)
         trainer.projector.load_state_dict(state["projector"])
@@ -306,12 +323,10 @@ def main() -> int:
         trainer.load_state_dict(torch.load(checkpoint, weights_only=False))
         print(f"resumed at step {trainer.step}/{args.max_steps}", flush=True)
         trainer.train(max_steps=args.max_steps)
-        checkpoint.parent.mkdir(parents=True, exist_ok=True)
-        torch.save(trainer.state_dict(), checkpoint)
+        trainer.save_checkpoint(checkpoint)
     else:
         trainer.train(max_steps=args.max_steps)
-        checkpoint.parent.mkdir(parents=True, exist_ok=True)
-        torch.save(trainer.state_dict(), checkpoint)
+        trainer.save_checkpoint(checkpoint)
 
     eval_result = evaluate(model, tok, encoder, trainer.projector, dataset.test, "cuda")
     usage = resource.getrusage(resource.RUSAGE_SELF)
