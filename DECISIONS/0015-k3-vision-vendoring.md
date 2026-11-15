@@ -33,4 +33,4 @@ The official tower code is used, not rewritten. The K3 LM is not vendored. The e
 
 ## Open items
 - [U] GPU forward parity and FlashAttention 2 on sm_120. The CPU run passes but is CPU-bound; the eager path is not the training path. Owner: implementation agent. Closing step: run the slow test on the GPU box with an sm_120 FlashAttention 2 wheel and record the result.
-- [U] Tensor-by-tensor comparison with the earlier standalone extraction (`keypa/MoonViT-V2-Standalone`). The extraction manifest says the 165 tower tensors are byte-identical; the earlier file is not in this repository. Owner: implementation agent. Closing step: download the earlier file and compare, or cite the extraction result in the G0 report.
+- Closed: the earlier standalone extraction comparison. The owner ran it; all 165 tower tensors are byte-identical. The new public copy is `keypa/MoonViT-V2-K3-f831ab66`.
