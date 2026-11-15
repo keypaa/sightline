@@ -1,0 +1,4 @@
+{"answer_loss_gap": 15.65624259551987, "blank": 0.0, "elapsed_s": 1318.72, "event": "wp10_seed0", "max_gpu_memory_mb": 19073.2, "peak_rss_mb": 7764.7, "real": 1.0, "shuffled": 0.0625, "steps_to_99": 125, "swapped": 0.0625, "vision_minus_blind": 1.0}
+{"answer_loss_gap": 15.80467893788591, "blank": 0.0, "elapsed_s": 1312.48, "event": "wp10_seed1", "max_gpu_memory_mb": 19073.2, "peak_rss_mb": 7900.3, "real": 1.0, "shuffled": 0.0625, "steps_to_99": 125, "swapped": 0.0625, "vision_minus_blind": 1.0}
+{"answer_loss_gap": 15.718740794807673, "blank": 0.0, "elapsed_s": 1279.68, "event": "wp10_seed2", "max_gpu_memory_mb": 19073.2, "peak_rss_mb": 7898.8, "real": 1.0, "shuffled": 0.0625, "steps_to_99": 150, "swapped": 0.0625, "vision_minus_blind": 1.0}
+{"event": "wp10_summary", "gpu": "A10G", "max_steps": 500, "micro_batch": 8, "seeds_passed": 3, "seeds_total": 3}

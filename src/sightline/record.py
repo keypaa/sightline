@@ -98,6 +98,7 @@ class RunRecord:
         runtime: dict[str, Any] | None = None,
         chat_template: dict[str, Any] | None = None,
         outcome: str | None = None,
+        gpu_hours: float = 0.0,
     ) -> None:
         self.root = Path(root)
         self.dry_run = dry_run
@@ -105,6 +106,7 @@ class RunRecord:
         self.runtime = runtime
         self.chat_template = chat_template
         self.outcome = outcome
+        self.gpu_hours = gpu_hours
         self.repo = find_repo(Path(repo) if repo is not None else Path.cwd())
         self.run_id = run_id or make_run_id(self.repo)
         self.run_path = self.root / "run.json"
@@ -150,7 +152,7 @@ class RunRecord:
             "attention_backend": reader["attn_backend"],
             "dtypes": self.config["precision"],
             "metrics_path": self.metrics_path.name,
-            "gpu_hours": 0.0,
+            "gpu_hours": self.gpu_hours,
             "outcome": self.outcome
             if self.outcome is not None
             else ("dry run: no model loaded" if self.dry_run else "pending"),

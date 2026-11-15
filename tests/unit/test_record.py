@@ -68,6 +68,11 @@ def test_outcome_override(tmp_path: Path) -> None:
     assert json.loads(rec.write().read_text())["outcome"] == "done"
 
 
+def test_gpu_hours_override(tmp_path: Path) -> None:
+    rec = RunRecord(root=tmp_path, dry_run=False, gpu_hours=1.5)
+    assert json.loads(rec.write().read_text())["gpu_hours"] == 1.5
+
+
 def test_git_state_has_commit_branch_and_dirty() -> None:
     root = Path(__file__).resolve().parents[2]
     state = git_state(root)
