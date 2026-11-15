@@ -26,9 +26,7 @@ class Projector(nn.Module):
     ) -> None:
         super().__init__()
         if init not in ("random", "embedding_alignment"):
-            raise ValueError(
-                f"init must be 'random' or 'embedding_alignment', got {init!r}"
-            )
+            raise ValueError(f"init must be 'random' or 'embedding_alignment', got {init!r}")
         if init == "embedding_alignment":
             raise NotImplementedError(
                 "embedding alignment init is a later ablation; see DECISIONS 0022"
@@ -51,9 +49,7 @@ class Projector(nn.Module):
     def parameter_count(self) -> int:
         return sum(parameter.numel() for parameter in self.parameters())
 
-    def norm_ratio(
-        self, features: torch.Tensor, embedding_weight: torch.Tensor
-    ) -> torch.Tensor:
+    def norm_ratio(self, features: torch.Tensor, embedding_weight: torch.Tensor) -> torch.Tensor:
         """Mean projector-output norm over mean embedding-row norm."""
 
         output = self(features)

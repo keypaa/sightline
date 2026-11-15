@@ -9,9 +9,7 @@ from PIL import Image
 from sightline.projector import Projector
 from sightline.vision_k3_encoder import K3VisionEncoder
 
-K3_WEIGHTS = (
-    Path(__file__).resolve().parents[2] / "artifacts" / "k3_vision_f831ab66.safetensors"
-)
+K3_WEIGHTS = Path(__file__).resolve().parents[2] / "artifacts" / "k3_vision_f831ab66.safetensors"
 
 pytestmark = [
     pytest.mark.skipif(
