@@ -34,7 +34,7 @@ image = (
         extra_index_url="https://download.pytorch.org/whl/cu130",
     )
     .add_local_dir("src", "/root/src")
-    .add_local_file("tools/run_m1.py", "/root/run_m1.py")
+    .add_local_file("tools/run_m1.py", "/root/local_runner.py")
     .add_local_file(
         "artifacts/k3_vision_f831ab66.safetensors",
         "/root/artifacts/k3_vision_f831ab66.safetensors",
@@ -60,12 +60,12 @@ def run(args: list[str], timeout_steps: int = 0) -> dict:
     sys.path.insert(0, "/root")
     os.chdir("/root")
 
-    import run_m1
+    import local_runner
 
     buffer = io.StringIO()
-    sys.argv = ["run_m1.py", *args]
+    sys.argv = ["local_runner.py", *args]
     with redirect_stdout(buffer):
-        code = run_m1.main()
+        code = local_runner.main()
     return {"exit_code": code, "stdout": buffer.getvalue()}
 
 

@@ -95,7 +95,11 @@ def cuda_info() -> dict[str, Any]:
 
 def make_run_id(repo: Path) -> str:
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-    return f"{stamp}-{_git(repo, 'rev-parse', 'HEAD')[:7]}"
+    try:
+        commit = _git(repo, "rev-parse", "HEAD")[:7]
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        commit = "nogit"
+    return f"{stamp}-{commit}"
 
 
 class RunRecord:
