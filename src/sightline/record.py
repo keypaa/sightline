@@ -25,7 +25,9 @@ SCHEMA_VERSION = "0.1"
 
 
 def _git(repo: Path, *args: str) -> str:
-    return subprocess.check_output(["git", "-C", str(repo), *args], text=True).strip()
+    return subprocess.check_output(
+        ["git", "-C", str(repo), *args], text=True, stderr=subprocess.DEVNULL
+    ).strip()
 
 
 def find_repo(start: Path) -> Path:
@@ -36,14 +38,24 @@ def find_repo(start: Path) -> Path:
 
 
 def git_state(repo: Path) -> dict[str, Any]:
-    commit = _git(repo, "rev-parse", "HEAD")
-    branch = _git(repo, "rev-parse", "--abbrev-ref", "HEAD")
-    status = subprocess.run(
-        ["git", "-C", str(repo), "status", "--porcelain"],
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout
+    """Commit, branch and dirty flag, or nulls when this is not a checkout.
+
+    Runs outside the repository happen (a Modal container mounts the source but
+    has no .git). Returning nulls keeps the record honest: an invented commit
+    hash would be worse than a missing one.
+    """
+
+    try:
+        commit = _git(repo, "rev-parse", "HEAD")
+        branch = _git(repo, "rev-parse", "--abbrev-ref", "HEAD")
+        status = subprocess.run(
+            ["git", "-C", str(repo), "status", "--porcelain"],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return {"commit": None, "branch": None, "dirty": None, "note": "not a git checkout"}
     return {"commit": commit, "branch": branch, "dirty": bool(status.strip())}
 
 
