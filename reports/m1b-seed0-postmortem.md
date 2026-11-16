@@ -59,11 +59,32 @@ its initial behaviour — which looks exactly like "confident, plausible, wrong"
 This is a hypothesis. It is testable by logging the projector's gradient norm per
 step, which `clip_grad_norm_` already computes.
 
+## The gradient-norm check (2026-11-16, A10G, 50 steps)
+
+| metric | value |
+| --- | --- |
+| mean gradient norm, last 25 steps | **829.4** |
+| max gradient norm, last 25 steps | 1264.4 |
+| loss at step 10 | 22.29 |
+| loss at step 50 | 16.07 |
+| mean loss, last 25 steps | 20.56 |
+| step time | 9.69 s |
+
+The projector's gradient is not weak. It is enormous, and `grad_clip=1.0` rescales
+it by roughly 800–1000× on every step. So the hypothesis "the signal does not
+reach the projector" is false, and an LR sweep is not the highest-value next
+experiment.
+
+The more striking number is the loss: 20.6 mean against `ln(151936) = 11.9` for a
+uniform guess. A randomly initialised projector spliced into 256 image positions
+makes the reader produce logits far more extreme than a uniform prior. That is a
+plausible root cause for both the high gradients and the failed fine-tuning: the
+output scale of the projector is wrong at init, not the learning rate.
+
 ## Next
 
-1. Log gradient norm and loss every step on a short run.
-2. If the gradient norm is non-trivial, sweep LR at ~200 steps.
-3. Only then re-run 2048 steps, and only once the loss converges rather than
-   oscillates.
-4. Re-run the evaluation under both exact match and a lenient parser, with a
-   DECISIONS entry for the metric change.
+1. Scale the projector output to the reader's embedding scale (DECISIONS entry
+   required), then re-run this 50-step check. Success criteria: initial loss near
+   or below 11.9 and a gradient norm in single digits.
+2. Only if that fails, sweep LR.
+3. Re-run 2048 steps once the loss converges rather than oscillates.
