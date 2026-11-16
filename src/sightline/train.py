@@ -53,6 +53,7 @@ class Trainer:
         dtype: torch.dtype = torch.float32,
         cycle: bool = False,
         trim_logits: bool = True,
+        track_grad_norm: bool = False,
         on_step: Callable[[dict[str, Any]], None] | None = None,
     ) -> None:
         self.model = model
@@ -68,8 +69,10 @@ class Trainer:
         self.dtype = dtype
         self.cycle = cycle
         self.trim_logits = trim_logits
+        self.track_grad_norm = track_grad_norm
         self.on_step = on_step
         self.step_times: deque[float] = deque(maxlen=50)
+        self.grad_norms: deque = deque(maxlen=50)
         self.projector = projector.to(self.device)
         self.optimizer = torch.optim.AdamW(
             self.projector.parameters(),
@@ -116,7 +119,8 @@ class Trainer:
                 (loss / self.micro_batches_per_step).backward()
                 total_loss += loss.item() / self.micro_batches_per_step
 
-        torch.nn.utils.clip_grad_norm_(self.projector.parameters(), self.grad_clip)
+        grad_norm = torch.nn.utils.clip_grad_norm_(self.projector.parameters(), self.grad_clip)
+        self.grad_norms.append(grad_norm.detach())
         self.optimizer.step()
         self.scheduler.step()
         self.losses.append(total_loss)
@@ -129,6 +133,9 @@ class Trainer:
                     "loss": total_loss,
                     "step_s": self.step_times[-1],
                     "median_step_s": float(median(self.step_times)),
+                    "grad_norm": self.recent_grad_norm()
+                    if self.track_grad_norm and self.grad_norms
+                    else None,
                     "step_times": len(self.step_times),
                 }
             )
@@ -204,6 +211,16 @@ class Trainer:
             if self.device.type == "cuda"
             else None,
         }
+
+    def recent_grad_norm(self) -> float:
+        """Last gradient norm, read from the device on demand.
+
+        Reading it costs a device sync, so callers that only want speed keep
+        ``track_grad_norm`` off; the norm is still accumulated for anyone who
+        asks later.
+        """
+
+        return float(self.grad_norms[-1]) if self.grad_norms else float("nan")
 
     def state_dict(self) -> dict[str, Any]:
         cuda_rng = torch.cuda.get_rng_state() if torch.cuda.is_available() else None

@@ -60,6 +60,8 @@ class ProgressPrinter:
             f"elapsed {format_duration(info.get('elapsed_s', median_step_s * step))}",
             f"eta {format_duration(median_step_s * remaining)}",
         ]
+        if info.get("grad_norm") is not None:
+            parts.append(f"gnorm {float(info['grad_norm']):.3e}")
         if self.label:
             parts.insert(0, self.label)
         self.stream("  ".join(parts))

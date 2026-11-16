@@ -237,6 +237,41 @@ def evaluate(model, tok, encoder, projector, examples, device):
     return {"report": report, "g1_pass": g1_pass(report), "per_task": per_task}
 
 
+def sweep_summary(trainer, window: int = 25) -> dict:
+    """Loss and gradient-norm summary for one sweep point.
+
+    The gradient norm is the diagnostic: if it stays near zero the projector is
+    not receiving signal through the frozen reader, and no learning rate will
+    fix that.
+    """
+
+    losses = trainer.losses[-window:]
+    norms = [float(n) for n in list(trainer.grad_norms)[-window:]]
+    return {
+        "final_loss": trainer.losses[-1] if trainer.losses else None,
+        "mean_loss_last_window": sum(losses) / len(losses) if losses else None,
+        "mean_grad_norm": sum(norms) / len(norms) if norms else None,
+        "max_grad_norm": max(norms) if norms else None,
+    }
+
+
+def build_record(seed: int, outcome: str) -> RunRecord:
+    return RunRecord(
+        Path(f"experiments/m1b_train/seed{seed}"),
+        dry_run=False,
+        config=resolve_config(Config()),
+        runtime={
+            "n_visual_tokens": 256,
+            "reader_hidden_size": 2048,
+            "projector_hidden_width": 4096,
+            "k3_tower_width": 4096,
+            "derived_at_runtime": True,
+        },
+        chat_template=CHAT_TEMPLATE,
+        outcome=outcome,
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=0)
@@ -290,6 +325,23 @@ def main() -> int:
         default=0,
         help="print N expected-vs-generated answers and exit; no full evaluation",
     )
+    parser.add_argument(
+        "--log-every",
+        type=int,
+        default=0,
+        help="append loss, gradient norm and step time to metrics.jsonl every N steps",
+    )
+    parser.add_argument(
+        "--track-grad-norm",
+        action="store_true",
+        help="log the projector's gradient norm (costs one device sync per step)",
+    )
+    parser.add_argument(
+        "--lr-sweep",
+        type=str,
+        default=None,
+        help="comma-separated learning rates; run each for --max-steps and compare",
+    )
     args = parser.parse_args()
 
     if not torch.cuda.is_available():
@@ -316,25 +368,55 @@ def main() -> int:
     base = build_batches(dataset.train, train_features, tok, "cuda", args.micro_batch)
     del train_features
 
-    torch.manual_seed(123)
-    projector = Projector(input_width=4096, reader_width=2048)
-    trainer = Trainer(
-        model,
-        projector,
-        base,
-        micro_batches_per_step=min(128 // args.micro_batch, len(base)),
-        base_lr=args.lr,
-        warmup_steps=50,
-        max_steps=args.max_steps,
-        weight_decay=0.1,
-        betas=(0.9, 0.95),
-        grad_clip=1.0,
-        placeholder_id=IMAGE_PAD,
-        device="cuda",
-        dtype=torch.bfloat16,
-        cycle=True,
-        trim_logits=not args.no_trim_logits,
-    )
+    def make_trainer(lr: float) -> Trainer:
+        torch.manual_seed(123)
+        projector = Projector(input_width=4096, reader_width=2048)
+        trainer = Trainer(
+            model,
+            projector,
+            base,
+            micro_batches_per_step=min(128 // args.micro_batch, len(base)),
+            base_lr=lr,
+            warmup_steps=50,
+            max_steps=args.max_steps,
+            weight_decay=0.1,
+            betas=(0.9, 0.95),
+            grad_clip=1.0,
+            placeholder_id=IMAGE_PAD,
+            device="cuda",
+            dtype=torch.bfloat16,
+            cycle=True,
+            trim_logits=not args.no_trim_logits,
+            track_grad_norm=args.track_grad_norm,
+        )
+        return trainer
+
+    if args.lr_sweep:
+        rows = []
+        for lr in (float(x) for x in args.lr_sweep.split(",")):
+            trainer = make_trainer(lr)
+            started = time.perf_counter()
+            trainer.train(max_steps=args.max_steps)
+            row = {
+                "lr": lr,
+                "elapsed_s": round(time.perf_counter() - started, 1),
+                **sweep_summary(trainer),
+            }
+            rows.append(row)
+            print(json.dumps(row), flush=True)
+        record = build_record(args.seed, f"M1b: LR sweep over {len(rows)} values")
+        record.write()
+        record.append_metric({"event": "m1b_lr_sweep", "seed": args.seed, "rows": rows})
+        print(f"{'lr':>10} {'final':>10} {'mean last 25':>13} {'mean gnorm':>12}")
+        for row in rows:
+            gnorm = "n/a" if row["mean_grad_norm"] is None else f"{row['mean_grad_norm']:.3e}"
+            print(
+                f"{row['lr']:>10.0e} {row['final_loss']:>10.4f} "
+                f"{row['mean_loss_last_window']:>13.4f} {gnorm:>12}"
+            )
+        return 0
+
+    trainer = make_trainer(args.lr)
 
     started = time.perf_counter()
     checkpoint = Path(f"artifacts/m1b/seed{args.seed}/projector.pt")
@@ -342,9 +424,22 @@ def main() -> int:
         total=args.max_steps, every=args.progress_every, label=f"[seed {args.seed}]"
     )
     train_started = time.perf_counter()
+    record = build_record(args.seed, "M1b: training + G1 evaluation")
 
     def on_step(info: dict) -> None:
         progress({**info, "elapsed_s": time.perf_counter() - train_started})
+        if args.log_every > 0 and info["step"] % args.log_every == 0:
+            record.append_metric(
+                {
+                    "event": "m1b_step",
+                    "seed": args.seed,
+                    "step": info["step"],
+                    "loss": info["loss"],
+                    "grad_norm": info["grad_norm"],
+                    "step_s": info["step_s"],
+                    "lr": args.lr,
+                }
+            )
         if (
             args.save_every > 0
             and info["step"] % args.save_every == 0
@@ -424,20 +519,6 @@ def main() -> int:
         "max_gpu_memory_mb": round(torch.cuda.max_memory_allocated() / 1024 / 1024, 1),
     }
 
-    record = RunRecord(
-        Path(f"experiments/m1b_train/seed{args.seed}"),
-        dry_run=False,
-        config=resolve_config(Config()),
-        runtime={
-            "n_visual_tokens": 256,
-            "reader_hidden_size": 2048,
-            "projector_hidden_width": 4096,
-            "k3_tower_width": 4096,
-            "derived_at_runtime": True,
-        },
-        chat_template=CHAT_TEMPLATE,
-        outcome="M1b: training + G1 evaluation",
-    )
     record.write()
     record.append_metric(
         {

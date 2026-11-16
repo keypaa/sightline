@@ -64,3 +64,12 @@ def test_printer_prefixes_the_label() -> None:
     printer({"step": 1, "loss": 1.0, "step_s": 0.1, "median_step_s": 0.1})
 
     assert lines[0].startswith("[seed 0]")
+
+
+def test_printer_shows_the_gradient_norm_when_present() -> None:
+    lines: list[str] = []
+
+    printer = ProgressPrinter(total=2, every=1, stream=lines.append)
+    printer({"step": 1, "loss": 1.0, "step_s": 0.1, "median_step_s": 0.1, "grad_norm": 0.25})
+
+    assert "gnorm 2.500e-01" in lines[0]

@@ -322,6 +322,26 @@ def test_batch_level_answer_length_avoids_a_device_sync() -> None:
     assert captured["n_supervised"] == 2
 
 
+def test_grad_norm_is_tracked_only_when_asked() -> None:
+    model = tiny_model()
+    batches = make_batches(seed=21, n_micro=4)
+
+    quiet = make_trainer(model, batches)
+    quiet.cycle = True
+    quiet.on_step = lambda info: captured.setdefault("quiet", info)
+    captured: dict = {}
+    quiet.train(max_steps=1)
+    assert captured["quiet"]["grad_norm"] is None
+
+    loud = make_trainer(model, batches)
+    loud.cycle = True
+    loud.track_grad_norm = True
+    loud.on_step = lambda info: captured.__setitem__("loud", info)
+    loud.train(max_steps=1)
+    assert captured["loud"]["grad_norm"] > 0.0
+    assert loud.recent_grad_norm() == captured["loud"]["grad_norm"]
+
+
 def test_save_checkpoint_is_atomic(tmp_path: Path) -> None:
     model = tiny_model()
     batches = make_batches(seed=9, n_micro=4)

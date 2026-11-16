@@ -101,6 +101,9 @@ reports/            generated reports (small, diffable)
 - M1 run: `PYTHONPATH=src python tools/run_m1.py --seed 0 --max-steps 2048 --micro-batch 16` (prints `[seed 0] step 512/2048 25% loss ... eta ...` every `--progress-every` steps).
 - M1 resume: `PYTHONPATH=src python tools/run_m1.py --seed 0 --resume` (continues from `artifacts/m1b/seed<seed>/projector.pt`, restoring optimizer, scheduler, step and RNG).
 - M1 timing probe: `PYTHONPATH=src python tools/run_m1.py --seed 0 --probe-steps 20 --micro-batch 16` (2 untimed warmup steps, no checkpoint; writes `experiments/m1b_probe/micro16/`).
+- M1 gradient/loss trace: `PYTHONPATH=src python tools/run_m1.py --seed 0 --max-steps 200 --log-every 1 --track-grad-norm` (per-step loss and projector gradient norm in `metrics.jsonl`).
+- M1 LR sweep: `PYTHONPATH=src python tools/run_m1.py --seed 0 --max-steps 200 --lr-sweep 1e-4,3e-4,1e-3,3e-3 --track-grad-norm`.
+- M1 profiler: `PYTHONPATH=src python tools/profile_m1.py --n-examples 32 --micro-batch 4` (phase split, kernel table, batch scaling).
 - M1 eval: `PYTHONPATH=src python tools/run_m1.py --seed 0 --eval-only`.
 - G1 report: `PYTHONPATH=src python tools/g1_report.py` (writes `reports/g1.md` from the run records; exit 0 only when G1 passes).
 - Modal overfit: `python3 modal/wp10_overfit.py --seed 0`.
