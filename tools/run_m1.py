@@ -29,6 +29,7 @@ import json
 import resource
 import time
 from pathlib import Path
+from statistics import median
 
 import torch
 from PIL import Image
@@ -342,6 +343,11 @@ def main() -> int:
         default=None,
         help="comma-separated learning rates; run each for --max-steps and compare",
     )
+    parser.add_argument(
+        "--no-eval",
+        action="store_true",
+        help="train and print the loss/gradient summary, but skip the G1 evaluation",
+    )
     args = parser.parse_args()
 
     if not torch.cuda.is_available():
@@ -495,6 +501,28 @@ def main() -> int:
         trainer.save_checkpoint(checkpoint)
 
     split = sample_evenly(list(getattr(dataset, args.eval_split)), args.eval_limit)
+
+    if args.no_eval:
+        norms = [float(n) for n in list(trainer.grad_norms)[-25:]]
+        losses = trainer.losses[-25:]
+        print(
+            json.dumps(
+                {
+                    "seed": args.seed,
+                    "steps": trainer.step,
+                    "final_loss": trainer.losses[-1],
+                    "mean_loss_last_25": sum(losses) / len(losses) if losses else None,
+                    "mean_grad_norm_last_25": sum(norms) / len(norms) if norms else None,
+                    "max_grad_norm_last_25": max(norms) if norms else None,
+                    "median_step_s": float(median(trainer.step_times))
+                    if trainer.step_times
+                    else None,
+                },
+                indent=2,
+            ),
+            flush=True,
+        )
+        return 0
 
     if args.debug_generations:
         debug_generations(
