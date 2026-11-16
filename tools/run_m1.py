@@ -431,6 +431,7 @@ def main() -> int:
     )
     train_started = time.perf_counter()
     record = build_record(args.seed, "M1b: training + G1 evaluation")
+    record.write()
 
     def on_step(info: dict) -> None:
         progress({**info, "elapsed_s": time.perf_counter() - train_started})
@@ -547,7 +548,8 @@ def main() -> int:
         "max_gpu_memory_mb": round(torch.cuda.max_memory_allocated() / 1024 / 1024, 1),
     }
 
-    record.write()
+    # run.json and metrics.jsonl were created before training so step metrics
+    # could be appended as the run progressed; nothing to write again here.
     record.append_metric(
         {
             "event": "m1b",
