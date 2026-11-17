@@ -160,6 +160,51 @@ def debug_generations(model, tok, encoder, projector, examples, device, n) -> No
         )
 
 
+def debug_logits(model, tok, encoder, projector, examples, device, n) -> None:
+    """Compare teacher-forced top-k with greedy decoding on the same examples.
+
+    This separates two failures that look identical from the outside:
+
+    - teacher-forced top-1 is the answer but greedy is not -> the model learned
+      and the generation path is wrong (cache, masks, or prompt handling);
+    - teacher-forced top-1 is also wrong -> the model never learned, and the
+      problem is optimisation or capacity rather than decoding.
+
+    The examples are sampled evenly; the splits are ordered by answer.
+    """
+
+    examples = sample_evenly(list(examples), n)
+    features = torch.cat([encoder.encode([e.image]) for e in examples], dim=0)
+    embed = model.get_input_embeddings()
+    teacher_forced = 0
+    for i, example in enumerate(examples):
+        prompt_ids = build_prompt(tok, example, device)
+        answer_ids = tok(
+            example.answer + tok.eos_token, add_special_tokens=False, return_tensors="pt"
+        )["input_ids"].to(device)
+        ids = torch.cat([prompt_ids, answer_ids], dim=1)
+        with torch.no_grad():
+            visual = projector(features[i : i + 1].float())
+            spliced = splice(ids, visual, IMAGE_PAD, embed.weight)
+            logits = model(inputs_embeds=spliced, attention_mask=torch.ones_like(ids)).logits
+        position = prompt_ids.shape[1] - 1
+        probabilities = logits[0, position].float().softmax(dim=-1)
+        top = torch.topk(probabilities, 5)
+        top_tokens = [
+            (tok.decode([int(token)]), round(float(p), 3))
+            for token, p in zip(top.indices, top.values, strict=True)
+        ]
+        greedy = generate_answer(model, tok, projector, prompt_ids, features[i : i + 1], device)
+        top_answer = str(top_tokens[0][0]).strip().lower().strip(" .!")
+        teacher_forced += int(top_answer == example.answer)
+        print(
+            f"[{example.task}] expected={example.answer!r} "
+            f"teacher_forced_top1={top_tokens[0][0]!r} greedy={greedy!r} "
+            f"top5={top_tokens}"
+        )
+    print(f"teacher-forced top-1 correct: {teacher_forced}/{len(examples)}", flush=True)
+
+
 def chance_rates(examples) -> dict[str, float]:
     """Guessing rate per task, from the distinct answers the test split contains."""
 
@@ -353,6 +398,12 @@ def main() -> int:
         action="store_true",
         help="skip matching the projector output RMS to the reader's embedding RMS",
     )
+    parser.add_argument(
+        "--debug-logits",
+        type=int,
+        default=0,
+        help="print teacher-forced top-5 against greedy decoding for N examples",
+    )
     args = parser.parse_args()
 
     if not torch.cuda.is_available():
@@ -541,6 +592,10 @@ def main() -> int:
             ),
             flush=True,
         )
+        return 0
+
+    if args.debug_logits:
+        debug_logits(model, tok, encoder, trainer.projector, split, "cuda", args.debug_logits)
         return 0
 
     if args.debug_generations:
