@@ -1,8 +1,30 @@
 # DECISION-0035: scale the projector output to the reader's embedding RMS
 
 Date: 2026-11-17
-Status: accepted (pending the A10G confirmation probe)
+Status: tested, negative result
 Work package: M1b
+
+## Outcome (2026-11-17)
+
+The 50-step A10G probe with scaling enabled measured `output_scale = 0.173934`
+and produced:
+
+| metric | unscaled | scaled |
+| --- | --- | --- |
+| mean loss, last 25 steps | 20.56 | 19.84 |
+| mean gradient norm | 829.4 | 803.4 |
+| final loss | 16.07 | 15.32 |
+
+No meaningful change, so the hypothesis is rejected. The reason is visible in
+the reader: `Qwen3DecoderLayer.forward` begins with
+`hidden_states = self.input_layernorm(hidden_states)`. That is an RMSNorm, so a
+global scalar multiple applied to the input embeddings is divided out again at
+the first layer. Scaling the projector output cannot move the loss for this
+reader. [V: `transformers.models.qwen3.modeling_qwen3`, installed 5.12.1]
+
+The code is kept rather than reverted: it is tested, it is the right thing to do
+for a reader without an input RMSNorm, and deleting it would lose the evidence
+that it is inert here.
 
 ## Context
 
