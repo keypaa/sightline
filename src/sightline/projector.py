@@ -71,7 +71,7 @@ def calibrate_output_scale(
     """
 
     with torch.no_grad():
-        produced = projector(features)
+        produced = projector(features.to(next(projector.parameters()).dtype))
         rms_out = produced.float().pow(2).mean().sqrt().clamp_min(1e-12)
         rms_ref = reference.float().pow(2).mean().sqrt().clamp_min(1e-12)
     scale = float(rms_ref / rms_out)
