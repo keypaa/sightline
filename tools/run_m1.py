@@ -41,7 +41,7 @@ from sightline.data.m1_synthetic import generate_m1_dataset
 from sightline.evaluate import g1_pass, g1_report
 from sightline.generate import generate_new_tokens
 from sightline.progress import ProgressPrinter
-from sightline.projector import Projector
+from sightline.projector import Projector, calibrate_output_scale
 from sightline.record import RunRecord
 from sightline.train import Batch, Trainer
 from sightline.vision_k3_encoder import K3VisionEncoder
@@ -348,6 +348,11 @@ def main() -> int:
         action="store_true",
         help="train and print the loss/gradient summary, but skip the G1 evaluation",
     )
+    parser.add_argument(
+        "--no-output-scale",
+        action="store_true",
+        help="skip matching the projector output RMS to the reader's embedding RMS",
+    )
     args = parser.parse_args()
 
     if not torch.cuda.is_available():
@@ -395,6 +400,11 @@ def main() -> int:
             trim_logits=not args.no_trim_logits,
             track_grad_norm=args.track_grad_norm,
         )
+        if not args.no_output_scale:
+            scale = calibrate_output_scale(
+                projector, model.get_input_embeddings().weight, base[0].features
+            )
+            print(f"output_scale: {scale:.6g}", flush=True)
         return trainer
 
     if args.lr_sweep:
@@ -488,7 +498,15 @@ def main() -> int:
     trainer.on_step = on_step
     if args.eval_only:
         state = torch.load(checkpoint, weights_only=False)
-        trainer.projector.load_state_dict(state["projector"])
+        projector_state = state["projector"]
+        if "output_scale" not in projector_state:
+            print(
+                "warning: checkpoint predates output scaling; loading with output_scale = 1.0",
+                flush=True,
+            )
+            trainer.projector.load_state_dict(projector_state, strict=False)
+        else:
+            trainer.projector.load_state_dict(projector_state)
         trainer.step = state["step"]
     elif args.resume:
         if not checkpoint.exists():

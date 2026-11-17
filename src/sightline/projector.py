@@ -40,11 +40,12 @@ class Projector(nn.Module):
         self.fc1 = nn.Linear(input_width, self.hidden_width)
         self.act = nn.GELU()
         self.fc2 = nn.Linear(self.hidden_width, reader_width)
+        self.register_buffer("output_scale", torch.tensor(1.0))
 
     def forward(self, features: torch.Tensor) -> torch.Tensor:
         if features.dim() == 4:
             features = features.reshape(features.shape[0], features.shape[1], -1)
-        return self.fc2(self.act(self.fc1(self.norm(features))))
+        return self.fc2(self.act(self.fc1(self.norm(features)))) * self.output_scale
 
     def parameter_count(self) -> int:
         return sum(parameter.numel() for parameter in self.parameters())
@@ -55,3 +56,24 @@ class Projector(nn.Module):
         output = self(features)
         embedding_norm = embedding_weight.norm(dim=-1).float().mean()
         return output.float().norm(dim=-1).mean() / embedding_norm
+
+
+def calibrate_output_scale(
+    projector: Projector, reference: torch.Tensor, features: torch.Tensor
+) -> float:
+    """Scale the projector output so its RMS matches a reference tensor's RMS.
+
+    A randomly initialised projector spliced into the image-pad positions produces
+    embeddings far larger than the reader's own, which drives the frozen reader
+    into an extreme, high-loss region. Setting the output RMS to the reference's
+    RMS puts the run in a sane region without hard-coding a constant: both scales
+    come from the weights and data in front of us.
+    """
+
+    with torch.no_grad():
+        produced = projector(features)
+        rms_out = produced.float().pow(2).mean().sqrt().clamp_min(1e-12)
+        rms_ref = reference.float().pow(2).mean().sqrt().clamp_min(1e-12)
+    scale = float(rms_ref / rms_out)
+    projector.output_scale.fill_(scale)
+    return scale

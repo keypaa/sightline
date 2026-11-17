@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 import torch
 
-from sightline.projector import Projector
+from sightline.projector import Projector, calibrate_output_scale
 
 
 def test_parameter_count_matches_formula() -> None:
@@ -53,3 +53,27 @@ def test_norm_ratio_is_positive_and_finite() -> None:
     ratio = projector.norm_ratio(features, embedding_weight)
     assert ratio > 0
     assert torch.isfinite(ratio)
+
+
+def test_calibrate_output_scale_matches_the_reference_rms() -> None:
+    torch.manual_seed(0)
+    projector = Projector(input_width=8, reader_width=8)
+    reference = torch.randn(64, 8) * 0.02
+    features = torch.randn(4, 3, 8) * 5.0
+
+    scale = calibrate_output_scale(projector, reference, features)
+
+    produced = projector(features)
+    rms_out = produced.float().pow(2).mean().sqrt()
+    rms_ref = reference.float().pow(2).mean().sqrt()
+    assert scale < 1.0
+    assert torch.allclose(rms_out, rms_ref, rtol=1e-4)
+
+
+def test_output_scale_multiplies_the_output() -> None:
+    projector = Projector(input_width=8, reader_width=8)
+    features = torch.randn(2, 3, 8)
+    baseline = projector(features)
+    projector.output_scale.fill_(0.0)
+    assert torch.count_nonzero(projector(features)) == 0
+    assert baseline.abs().sum() > 0
