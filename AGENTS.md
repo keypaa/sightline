@@ -13,6 +13,7 @@ Sightline is a clean-break research repository on post-hoc visual retrofitting: 
 - `docs/sightline-project-document.md`: main project document (plan, evidence, roadmap, gates).
 - `docs/m0-task-breakdown.md`: M0 work packages (WP0 to WP12), conformance suite, debugging ladder.
 - `DECISIONS/`: dated decision records. They override both documents. If two sources disagree, stop and ask.
+- `zenno/memory/findings.md`: what worked, what did not and why, what is ruled out, what is open. Read it before re-attempting anything that failed. `DECISIONS/` records choices; this records dead ends.
 
 ## How to work
 
