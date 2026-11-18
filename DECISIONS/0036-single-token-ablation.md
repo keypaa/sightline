@@ -1,7 +1,7 @@
 # DECISION-0036: single-token visual injection (test-only ablation)
 
 Date: 2026-11-18
-Status: accepted
+Status: tested, negative result
 Work package: M1b
 
 ## Context
@@ -48,6 +48,40 @@ canvas stays 448×448 and the tower stays unmodified.
 - Probe: 100% held-out on all three tasks, shuffles at chance. [V]
 - 300-step, LR 1e-3, 256-token result: loss 0.023, teacher-forced 10/20. [V]
 - `VisualSpec` unit tests pin the placeholder count and pooled shape. [V]
+
+## Outcome (2026-11-18)
+
+The single-token ablation ran at 300 steps, LR 1e-3, micro-batch 4 on an A10G,
+with `--debug-logits 20` on the train split.
+
+| | 256 tokens (control) | 1 token (this run) |
+| --- | --- | --- |
+| final loss | 0.023 | **3.82** |
+| loss at step 300 | 0.023 | 3.82 |
+| teacher-forced top-1 | **10/20** | **0/20** |
+| colour / shape / count | 2/7, 2/7, 6/6 | **0/7, 0/7, 0/6** |
+
+The model in single-token mode does not merely fail; it stops using the visual
+channel at all. Its greedy outputs are meta-commentary and non-English tokens —
+`'the color of the shape depends on the'`, `'כמובן! כדי לספק תשובה'`,
+`"i can't see the shape, but"` — the signature of a reader falling back to its
+chat prior with no usable visual input. [V]
+
+**Interpretation:** the negative branch. Dilution across 256 spliced positions is
+not the bottleneck; if anything, more visual tokens fit better. The shipped
+256-token design survives, and the 2048-step confirmation runs as originally
+specified at LR 1e-3.
+
+This is the suggestive case DECISIONS 0036 anticipated: one token is too narrow
+a channel to carry three tasks, so the result says the single-token *design* is
+bad, not that the 256-token path is sound.
+
+## Consequences
+
+- `--visual-tokens 1` stays in the code as a documented ablation, not the default.
+- The remaining puzzle is why the 256-token path fits loss (0.023) yet answers
+  only 10/20 under teacher forcing. That is now the question for the
+  confirmation run, which must log held-out exact match rather than loss alone.
 
 ## Open items
 

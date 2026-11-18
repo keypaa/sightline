@@ -69,6 +69,15 @@ resumable and made diagnostics cheap to re-ask. **[V]**
 
 ## What does not work
 
+### Single-token visual injection — clearly worse
+Replacing 256 spliced patches with one mean-pooled token dropped teacher-forced
+top-1 from 10/20 to **0/20** at 300 steps, and the loss from 0.023 to 3.82.
+Greedy outputs degraded into meta-commentary and non-English tokens
+(`'כמובן! כדי לספק תשובה'`), the signature of a reader with no usable visual
+input. **[V]** `DECISIONS/0036`.
+**Why:** one token is too narrow a channel for three tasks, so this kills the
+single-token *design*, not the 256-token path.
+
 ### Matching the projector output RMS to the embedding RMS — inert
 Setting `output_scale = 0.174` changed the mean loss from 20.56 to 19.84 and the
 gradient norm from 829 to 803. **[V]**
@@ -136,12 +145,11 @@ Recording them prevents re-testing.
 
 ## Open
 
-- **[U] Why a 25M-parameter projector cannot use information a 4096×8 linear layer
-  reads perfectly.** Owner: implementation agent. Closing step: a full run at
-  the learning rate that converges, with train exact-match logged rather than
-  loss alone.
-- **[U] Does the 256-token splice dilute the signal?** Closing step: compare a
-  single pooled visual token against the current 256-token injection.
+- **[U] Why the 256-token path fits the loss (0.023) yet answers only 10/20 under
+  teacher forcing.** Owner: implementation agent. Closing step: a 2048-step run
+  at LR 1e-3 that logs held-out exact match, not loss alone.
+- **[U] Whether the 256-token splice dilutes the signal.** Answered: no — single
+  token is far worse. Closed by `DECISIONS/0036`.
 - **[U] Is gradient clipping at 1.0 harmful?** Norms of ~800 mean every step is
   clipped by ~800×. Adam is largely scale-invariant, so probably not, but this
   has not been measured.
