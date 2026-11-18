@@ -86,6 +86,20 @@ def accuracy(model: nn.Module, x: torch.Tensor, y: torch.Tensor) -> float:
         return float((model(z).argmax(dim=1) == y.to(z.device)).float().mean())
 
 
+def sample_evenly(items: list, n: int) -> list:
+    """Take n items spread across the list.
+
+    The M1 splits are ordered by answer, so ``items[:n]`` is a biased sample:
+    a colour subset would contain four of the eight colours. A stride keeps the
+    label mix, which is what makes the reported chance rate meaningful.
+    """
+
+    if n >= len(items):
+        return items
+    step = len(items) / n
+    return [items[int(i * step)] for i in range(n)]
+
+
 def label_tables(examples) -> dict[str, dict[str, int]]:
     """Per-task answer to class-index maps.
 
@@ -135,8 +149,8 @@ def main() -> int:
     results = {}
     for task in ("color", "shape", "count"):
         table = labels[task]
-        train = [e for e in dataset.train if e.task == task][: args.per_task]
-        val = [e for e in dataset.val if e.task == task][: args.per_task]
+        train = sample_evenly([e for e in dataset.train if e.task == task], args.per_task)
+        val = sample_evenly([e for e in dataset.val if e.task == task], args.per_task)
 
         t = time.perf_counter()
         x_train = pool(encode_split(encoder, train))
@@ -144,6 +158,7 @@ def main() -> int:
         encode_s = time.perf_counter() - t
 
         table = labels[task]
+        seen = sorted({e.answer for e in train})
         y_train = torch.tensor([table[e.answer] for e in train])
         y_val = torch.tensor([table[e.answer] for e in val])
 
@@ -152,15 +167,15 @@ def main() -> int:
         )
         train_acc = accuracy(model, x_train, y_train)
         val_acc = accuracy(model, x_val, y_val)
-        chance = 1.0 / len(table)
         entry = {
             "n_train": len(train),
             "n_val": len(val),
             "classes": len(table),
-            "chance": round(chance, 4),
+            "classes_in_subset": len(seen),
+            "chance": round(1.0 / len(seen), 4),
             "train_accuracy": round(train_acc, 4),
             "val_accuracy": round(val_acc, 4),
-            "val_minus_chance": round(val_acc - chance, 4),
+            "val_minus_chance": round(val_acc - 1.0 / len(seen), 4),
             "encode_s": round(encode_s, 1),
         }
         if args.shuffle_control:

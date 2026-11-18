@@ -71,3 +71,15 @@ def test_label_tables_are_per_task() -> None:
     assert len(tables["color"]) == 2
     assert len(tables["shape"]) == 1
     assert len(tables["count"]) == 2
+
+
+def test_sample_evenly_spreads_across_ordered_items() -> None:
+    from tools.probe_features import sample_evenly
+
+    ordered = [f"c{i % 8}" for i in range(64)]
+
+    picked = sample_evenly(ordered, 8)
+
+    assert len(picked) == 8
+    assert len(set(picked)) == 8
+    assert picked[0] == "c0"
