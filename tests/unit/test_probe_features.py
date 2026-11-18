@@ -51,3 +51,23 @@ def test_probe_with_hidden_layer_still_recovers_the_signal() -> None:
     score = accuracy(model, x, y)
 
     assert score > 0.9
+
+
+def test_label_tables_are_per_task() -> None:
+    from types import SimpleNamespace
+
+    from tools.probe_features import label_tables
+
+    examples = [
+        SimpleNamespace(task="color", answer="red"),
+        SimpleNamespace(task="color", answer="blue"),
+        SimpleNamespace(task="shape", answer="square"),
+        SimpleNamespace(task="count", answer="1"),
+        SimpleNamespace(task="count", answer="2"),
+    ]
+
+    tables = label_tables(examples)
+
+    assert len(tables["color"]) == 2
+    assert len(tables["shape"]) == 1
+    assert len(tables["count"]) == 2

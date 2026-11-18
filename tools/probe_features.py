@@ -86,6 +86,21 @@ def accuracy(model: nn.Module, x: torch.Tensor, y: torch.Tensor) -> float:
         return float((model(z).argmax(dim=1) == y.to(z.device)).float().mean())
 
 
+def label_tables(examples) -> dict[str, dict[str, int]]:
+    """Per-task answer to class-index maps.
+
+    Each task has its own answer vocabulary: 8 colours, 4 shapes, 4 counts in the
+    training split. Building one shared table would give every task 16 classes
+    and make the reported chance rate wrong.
+    """
+
+    tables: dict[str, dict[str, int]] = {}
+    for example in examples:
+        table = tables.setdefault(example.task, {})
+        table.setdefault(example.answer, len(table))
+    return tables
+
+
 def encode_split(encoder: K3VisionEncoder, examples: list) -> torch.Tensor:
     return torch.cat([encoder.encode([e.image]) for e in examples], dim=0)
 
@@ -96,6 +111,11 @@ def main() -> int:
     parser.add_argument("--hidden", type=int, default=0, help="hidden width; 0 is linear")
     parser.add_argument("--steps", type=int, default=600)
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument(
+        "--shuffle-control",
+        action="store_true",
+        help="also score the model against permuted val labels; must land near chance",
+    )
     args = parser.parse_args()
 
     if not torch.cuda.is_available():
@@ -110,13 +130,11 @@ def main() -> int:
     )
     dataset = generate_m1_dataset(seed=0)
 
-    labels = {"color": {}, "shape": {}, "count": {}}
-    for name in labels:
-        for example in dataset.train:
-            labels[name].setdefault(example.answer, len(labels[name]))
+    labels = label_tables(dataset.train)
 
     results = {}
     for task in ("color", "shape", "count"):
+        table = labels[task]
         train = [e for e in dataset.train if e.task == task][: args.per_task]
         val = [e for e in dataset.val if e.task == task][: args.per_task]
 
@@ -135,7 +153,7 @@ def main() -> int:
         train_acc = accuracy(model, x_train, y_train)
         val_acc = accuracy(model, x_val, y_val)
         chance = 1.0 / len(table)
-        results[task] = {
+        entry = {
             "n_train": len(train),
             "n_val": len(val),
             "classes": len(table),
@@ -145,7 +163,12 @@ def main() -> int:
             "val_minus_chance": round(val_acc - chance, 4),
             "encode_s": round(encode_s, 1),
         }
-        print(json.dumps({"task": task, **results[task]}), flush=True)
+        if args.shuffle_control:
+            generator = torch.Generator().manual_seed(1234)
+            shuffled = y_val[torch.randperm(len(y_val), generator=generator)]
+            entry["shuffled_val_accuracy"] = round(accuracy(model, x_val, shuffled), 4)
+        results[task] = entry
+        print(json.dumps({"task": task, **entry}), flush=True)
 
     print(
         json.dumps(
