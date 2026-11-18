@@ -51,6 +51,8 @@ def train_probe(
     """Fit a linear (or one-hidden-layer) classifier on pooled features."""
 
     torch.manual_seed(seed)
+    x = x.to(x.device)
+    y = y.to(x.device)
     width = x.shape[1]
     n_classes = int(y.max()) + 1
     layers: list[nn.Module] = []
@@ -81,7 +83,7 @@ def train_probe(
 def accuracy(model: nn.Module, x: torch.Tensor, y: torch.Tensor) -> float:
     with torch.no_grad():
         z = (x - model.mean) / model.std
-        return float((model(z).argmax(dim=1) == y).float().mean())
+        return float((model(z).argmax(dim=1) == y.to(z.device)).float().mean())
 
 
 def encode_split(encoder: K3VisionEncoder, examples: list) -> torch.Tensor:
