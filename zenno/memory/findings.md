@@ -147,3 +147,11 @@ Recording them prevents re-testing.
   has not been measured.
 - **[U] Should the G1 metric change to a lenient parser?** It would need a
   DECISIONS entry and a seed re-run under both metrics. Not decided.
+### A diagnostic that runs after training must be rehearsed before it
+
+`debug_logits` was called without its new `spec` argument. The container trained
+for ~43 minutes and only then raised `TypeError`. The runner now rehearses any
+requested diagnostic once on the untrained projector with a single example and
+prints `diagnostic self-check ok` before training starts. **[V]**
+**Why:** a wiring error in the post-training path is indistinguishable from a
+crash until the run is over. Failing in the first minute costs nothing.

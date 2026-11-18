@@ -25,6 +25,8 @@ Outputs:
 from __future__ import annotations
 
 import argparse
+import contextlib
+import io
 import json
 import resource
 import time
@@ -529,6 +531,21 @@ def main() -> int:
 
     trainer = make_trainer(args.lr)
 
+    if args.debug_logits or args.debug_generations:
+        # Fail fast: the diagnostics run after training, so a wiring error there
+        # would otherwise surface only after the whole run. Rehearse them once on
+        # the untrained projector, with a single example, and say so.
+        with contextlib.redirect_stdout(io.StringIO()):
+            if args.debug_logits:
+                debug_logits(
+                    model, tok, encoder, trainer.projector, dataset.train[:1], "cuda", 1, spec
+                )
+            else:
+                debug_generations(
+                    model, tok, encoder, trainer.projector, dataset.train[:1], "cuda", 1, spec
+                )
+        print("diagnostic self-check ok", flush=True)
+
     started = time.perf_counter()
     checkpoint = Path(f"artifacts/m1b/seed{args.seed}/projector.pt")
     progress = ProgressPrinter(
@@ -639,7 +656,7 @@ def main() -> int:
         return 0
 
     if args.debug_logits:
-        debug_logits(model, tok, encoder, trainer.projector, split, "cuda", args.debug_logits)
+        debug_logits(model, tok, encoder, trainer.projector, split, "cuda", args.debug_logits, spec)
         return 0
 
     if args.debug_generations:
