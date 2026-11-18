@@ -44,5 +44,5 @@ def test_mean_mode_produces_one_token_of_the_same_width() -> None:
     prepared = visual.prepare(features)
 
     assert visual.placeholder.count("<|image_pad|>") == 1
-    assert prepared.shape == (2, 4096)
+    assert prepared.shape == (2, 1, 4096)
     assert torch.allclose(prepared[0], features[0].mean(dim=0))

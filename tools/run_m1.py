@@ -77,7 +77,7 @@ class VisualSpec:
 
     def prepare(self, features: torch.Tensor) -> torch.Tensor:
         if self.pooling == "mean":
-            return features.float().mean(dim=1).to(features.dtype)
+            return features.float().mean(dim=1).unsqueeze(1).to(features.dtype)
         if self.pooling == "patches":
             return features
         raise ValueError(f"unknown visual pooling {self.pooling!r}")
@@ -184,7 +184,7 @@ def debug_generations(
     """
 
     examples = sample_evenly(list(examples), n)
-    features = torch.cat([encoder.encode([e.image]) for e in examples], dim=0)
+    features = spec.prepare(torch.cat([encoder.encode([e.image]) for e in examples], dim=0))
     for i, example in enumerate(examples):
         prompt_ids = build_prompt(tok, example, device, spec)
         answer = generate_answer(model, tok, projector, prompt_ids, features[i : i + 1], device)
@@ -208,7 +208,7 @@ def debug_logits(model, tok, encoder, projector, examples, device, n, spec: Visu
     """
 
     examples = sample_evenly(list(examples), n)
-    features = torch.cat([encoder.encode([e.image]) for e in examples], dim=0)
+    features = spec.prepare(torch.cat([encoder.encode([e.image]) for e in examples], dim=0))
     embed = model.get_input_embeddings()
     teacher_forced = 0
     for i, example in enumerate(examples):
@@ -249,9 +249,9 @@ def chance_rates(examples) -> dict[str, float]:
 
 
 def evaluate(model, tok, encoder, projector, examples, device, spec: VisualSpec):
-    features = torch.cat([encoder.encode([e.image]) for e in examples], dim=0)
+    features = spec.prepare(torch.cat([encoder.encode([e.image]) for e in examples], dim=0))
     blank = Image.new("RGB", (448, 448), (255, 255, 255))
-    blank_features = encoder.encode([blank])
+    blank_features = spec.prepare(encoder.encode([blank]))
 
     prompts = []
     text_prompts = []
