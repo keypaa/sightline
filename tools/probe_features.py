@@ -58,7 +58,7 @@ def train_probe(
         layers += [nn.Linear(width, hidden), nn.GELU()]
         width = hidden
     layers.append(nn.Linear(width, n_classes))
-    model = nn.Sequential(*layers)
+    model = nn.Sequential(*layers).to(x.device)
 
     mean = x.mean(dim=0)
     std = x.std(dim=0).clamp_min(1e-6)
