@@ -28,6 +28,7 @@ import argparse
 import json
 import resource
 import time
+from dataclasses import dataclass
 from pathlib import Path
 from statistics import median
 
@@ -57,6 +58,37 @@ CHAT_TEMPLATE = {
 }
 
 
+@dataclass(frozen=True)
+class VisualSpec:
+    """How K3 features are presented to the reader.
+
+    The shipped design uses all 256 merged patches. The single-token mode is a
+    test-only ablation (DECISIONS 0036): it mean-pools the same features into one
+    vector, exactly as the linear probe did. Nothing here is hard-coded in the
+    prompt or the splice; every consumer derives its placeholder count from spec.
+    """
+
+    n_tokens: int
+    pooling: str  # "patches" or "mean"
+
+    @property
+    def placeholder(self) -> str:
+        return "<|image_pad|>" * self.n_tokens
+
+    def prepare(self, features: torch.Tensor) -> torch.Tensor:
+        if self.pooling == "mean":
+            return features.float().mean(dim=1).to(features.dtype)
+        if self.pooling == "patches":
+            return features
+        raise ValueError(f"unknown visual pooling {self.pooling!r}")
+
+
+VISUAL_SPECS = {
+    256: VisualSpec(256, "patches"),
+    1: VisualSpec(1, "mean"),
+}
+
+
 def load_reader():
     if (MODEL_ROOT / "config.json").exists():
         tok = AutoTokenizer.from_pretrained(str(MODEL_ROOT))
@@ -69,11 +101,11 @@ def load_reader():
     return tok, model.eval()
 
 
-def build_batches(examples, features, tok, device, micro_batch):
+def build_batches(examples, features, tok, device, micro_batch, spec: VisualSpec):
     singles = []
     for i, example in enumerate(examples):
         prompt_text = tok.apply_chat_template(
-            [{"role": "user", "content": "<|image_pad|>" * 256 + example.question}],
+            [{"role": "user", "content": spec.placeholder + example.question}],
             add_generation_prompt=True,
             enable_thinking=False,
             tokenize=False,
@@ -132,9 +164,9 @@ def sample_evenly(items: list, n: int | None) -> list:
     return [items[int(i * step)] for i in range(n)]
 
 
-def build_prompt(tok, example, device):
+def build_prompt(tok, example, device, spec: VisualSpec):
     text = tok.apply_chat_template(
-        [{"role": "user", "content": "<|image_pad|>" * 256 + example.question}],
+        [{"role": "user", "content": spec.placeholder + example.question}],
         add_generation_prompt=True,
         enable_thinking=False,
         tokenize=False,
@@ -142,7 +174,9 @@ def build_prompt(tok, example, device):
     return tok(text, return_tensors="pt")["input_ids"].to(device)
 
 
-def debug_generations(model, tok, encoder, projector, examples, device, n) -> None:
+def debug_generations(
+    model, tok, encoder, projector, examples, device, n, spec: VisualSpec
+) -> None:
     """Print what the model actually says, to tell a decode bug from a mapping bug.
 
     The examples are sampled evenly (see ``sample_evenly``): the first n of a
@@ -152,7 +186,7 @@ def debug_generations(model, tok, encoder, projector, examples, device, n) -> No
     examples = sample_evenly(list(examples), n)
     features = torch.cat([encoder.encode([e.image]) for e in examples], dim=0)
     for i, example in enumerate(examples):
-        prompt_ids = build_prompt(tok, example, device)
+        prompt_ids = build_prompt(tok, example, device, spec)
         answer = generate_answer(model, tok, projector, prompt_ids, features[i : i + 1], device)
         print(
             f"[{example.task}] expected={example.answer!r} got={answer!r} "
@@ -160,7 +194,7 @@ def debug_generations(model, tok, encoder, projector, examples, device, n) -> No
         )
 
 
-def debug_logits(model, tok, encoder, projector, examples, device, n) -> None:
+def debug_logits(model, tok, encoder, projector, examples, device, n, spec: VisualSpec) -> None:
     """Compare teacher-forced top-k with greedy decoding on the same examples.
 
     This separates two failures that look identical from the outside:
@@ -178,7 +212,7 @@ def debug_logits(model, tok, encoder, projector, examples, device, n) -> None:
     embed = model.get_input_embeddings()
     teacher_forced = 0
     for i, example in enumerate(examples):
-        prompt_ids = build_prompt(tok, example, device)
+        prompt_ids = build_prompt(tok, example, device, spec)
         answer_ids = tok(
             example.answer + tok.eos_token, add_special_tokens=False, return_tensors="pt"
         )["input_ids"].to(device)
@@ -214,7 +248,7 @@ def chance_rates(examples) -> dict[str, float]:
     return {task: 1.0 / len(options) for task, options in answers.items()}
 
 
-def evaluate(model, tok, encoder, projector, examples, device):
+def evaluate(model, tok, encoder, projector, examples, device, spec: VisualSpec):
     features = torch.cat([encoder.encode([e.image]) for e in examples], dim=0)
     blank = Image.new("RGB", (448, 448), (255, 255, 255))
     blank_features = encoder.encode([blank])
@@ -223,7 +257,7 @@ def evaluate(model, tok, encoder, projector, examples, device):
     text_prompts = []
     for example in examples:
         text = tok.apply_chat_template(
-            [{"role": "user", "content": "<|image_pad|>" * 256 + example.question}],
+            [{"role": "user", "content": spec.placeholder + example.question}],
             add_generation_prompt=True,
             enable_thinking=False,
             tokenize=False,
@@ -301,13 +335,13 @@ def sweep_summary(trainer, window: int = 25) -> dict:
     }
 
 
-def build_record(seed: int, outcome: str) -> RunRecord:
+def build_record(seed: int, outcome: str, spec: VisualSpec) -> RunRecord:
     return RunRecord(
         Path(f"experiments/m1b_train/seed{seed}"),
         dry_run=False,
         config=resolve_config(Config()),
         runtime={
-            "n_visual_tokens": 256,
+            "n_visual_tokens": spec.n_tokens,
             "reader_hidden_size": 2048,
             "projector_hidden_width": 4096,
             "k3_tower_width": 4096,
@@ -399,6 +433,13 @@ def main() -> int:
         help="skip matching the projector output RMS to the reader's embedding RMS",
     )
     parser.add_argument(
+        "--visual-tokens",
+        type=int,
+        choices=(256, 1),
+        default=256,
+        help="256 merged patches (shipped) or 1 mean-pooled token (test-only ablation)",
+    )
+    parser.add_argument(
         "--debug-logits",
         type=int,
         default=0,
@@ -425,9 +466,12 @@ def main() -> int:
         attn_implementation="eager",
     )
 
+    spec = VISUAL_SPECS[args.visual_tokens]
     dataset = generate_m1_dataset(seed=0)
-    train_features = torch.cat([encoder.encode([e.image]) for e in dataset.train], dim=0)
-    base = build_batches(dataset.train, train_features, tok, "cuda", args.micro_batch)
+    train_features = spec.prepare(
+        torch.cat([encoder.encode([e.image]) for e in dataset.train], dim=0)
+    )
+    base = build_batches(dataset.train, train_features, tok, "cuda", args.micro_batch, spec)
     del train_features
 
     def make_trainer(lr: float) -> Trainer:
@@ -471,7 +515,7 @@ def main() -> int:
             }
             rows.append(row)
             print(json.dumps(row), flush=True)
-        record = build_record(args.seed, f"M1b: LR sweep over {len(rows)} values")
+        record = build_record(args.seed, f"M1b: LR sweep over {len(rows)} values", spec)
         record.write()
         record.append_metric({"event": "m1b_lr_sweep", "seed": args.seed, "rows": rows})
         print(f"{'lr':>10} {'final':>10} {'mean last 25':>13} {'mean gnorm':>12}")
@@ -491,7 +535,7 @@ def main() -> int:
         total=args.max_steps, every=args.progress_every, label=f"[seed {args.seed}]"
     )
     train_started = time.perf_counter()
-    record = build_record(args.seed, "M1b: training + G1 evaluation")
+    record = build_record(args.seed, "M1b: training + G1 evaluation", spec)
     record.write()
 
     def on_step(info: dict) -> None:
@@ -532,7 +576,7 @@ def main() -> int:
             dry_run=False,
             config=resolve_config(Config()),
             runtime={
-                "n_visual_tokens": 256,
+                "n_visual_tokens": spec.n_tokens,
                 "reader_hidden_size": 2048,
                 "projector_hidden_width": 4096,
                 "k3_tower_width": 4096,
@@ -600,11 +644,11 @@ def main() -> int:
 
     if args.debug_generations:
         debug_generations(
-            model, tok, encoder, trainer.projector, split, "cuda", args.debug_generations
+            model, tok, encoder, trainer.projector, split, "cuda", args.debug_generations, spec
         )
         return 0
 
-    eval_result = evaluate(model, tok, encoder, trainer.projector, split, "cuda")
+    eval_result = evaluate(model, tok, encoder, trainer.projector, split, "cuda", spec)
     usage = resource.getrusage(resource.RUSAGE_SELF)
     summary = {
         "seed": args.seed,
