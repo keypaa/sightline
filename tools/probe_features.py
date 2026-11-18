@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import random
 import time
 from pathlib import Path
 
@@ -86,18 +87,18 @@ def accuracy(model: nn.Module, x: torch.Tensor, y: torch.Tensor) -> float:
         return float((model(z).argmax(dim=1) == y.to(z.device)).float().mean())
 
 
-def sample_evenly(items: list, n: int) -> list:
-    """Take n items spread across the list.
+def sample_subset(items: list, n: int, seed: int = 0) -> list:
+    """Take n items at random, deterministically.
 
-    The M1 splits are ordered by answer, so ``items[:n]`` is a biased sample:
-    a colour subset would contain four of the eight colours. A stride keeps the
-    label mix, which is what makes the reported chance rate meaningful.
+    The M1 splits are ordered by answer, so ``items[:n]`` is a biased sample: a
+    colour subset would contain four of the eight colours. A seeded shuffle is
+    unbiased, reproducible, and unlike a fixed stride it cannot alias onto a
+    single class when the period matches the stride.
     """
 
     if n >= len(items):
-        return items
-    step = len(items) / n
-    return [items[int(i * step)] for i in range(n)]
+        return list(items)
+    return random.Random(seed).sample(list(items), n)
 
 
 def label_tables(examples) -> dict[str, dict[str, int]]:
@@ -149,8 +150,10 @@ def main() -> int:
     results = {}
     for task in ("color", "shape", "count"):
         table = labels[task]
-        train = sample_evenly([e for e in dataset.train if e.task == task], args.per_task)
-        val = sample_evenly([e for e in dataset.val if e.task == task], args.per_task)
+        train = sample_subset(
+            [e for e in dataset.train if e.task == task], args.per_task, args.seed
+        )
+        val = sample_subset([e for e in dataset.val if e.task == task], args.per_task, args.seed)
 
         t = time.perf_counter()
         x_train = pool(encode_split(encoder, train))

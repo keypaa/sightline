@@ -73,13 +73,29 @@ def test_label_tables_are_per_task() -> None:
     assert len(tables["count"]) == 2
 
 
-def test_sample_evenly_spreads_across_ordered_items() -> None:
-    from tools.probe_features import sample_evenly
+def test_sample_subset_covers_every_class() -> None:
+    from tools.probe_features import sample_subset
 
     ordered = [f"c{i % 8}" for i in range(64)]
 
-    picked = sample_evenly(ordered, 8)
+    picked = sample_subset(ordered, 16, seed=0)
 
-    assert len(picked) == 8
-    assert len(set(picked)) == 8
-    assert picked[0] == "c0"
+    assert len(picked) == 16
+    # golden: a fixed seed must give a fixed answer, and it must not collapse
+    # onto one class the way a stride with a matching period does
+    assert sorted(set(picked)) == ["c0", "c1", "c2", "c3", "c5", "c6", "c7"]
+
+
+def test_sample_subset_is_reproducible() -> None:
+    from tools.probe_features import sample_subset
+
+    ordered = list(range(100))
+
+    assert sample_subset(ordered, 10, seed=3) == sample_subset(ordered, 10, seed=3)
+    assert sample_subset(ordered, 10, seed=3) != sample_subset(ordered, 10, seed=4)
+
+
+def test_sample_subset_returns_everything_when_n_is_large() -> None:
+    from tools.probe_features import sample_subset
+
+    assert sample_subset([1, 2, 3], 10) == [1, 2, 3]
