@@ -34,6 +34,21 @@ under 1.5%. **[V]**
 Why it matters: it killed the `torch.compile` plan before any time was spent on
 it. The step is GEMM-bound, so kernel fusion has little to fuse.
 
+### A single linear layer reads every answer from the frozen features — 100% held-out
+Mean-pool the 256 K3 patch vectors to 4096 numbers, fit one linear layer on 256
+train examples, score on 256 held-out val examples: **color 1.000 (chance 0.125),
+shape 1.000 (0.25), count 1.000 (0.25)**. Shuffled-label controls land at chance
+for all three. **[V]**
+**Why it matters:** this is the decisive result. The answers are in the frozen
+features in linearly-decodable form. The failure is in the projector-to-reader
+path, not in extraction. Full write-up in `reports/m1b-feature-probe.md`.
+
+### A shuffle control is worth building into a probe
+It caught an ordering-bias bug that would otherwise have produced a beautiful
+100% on a partial label set. **[V]**
+**Why:** a control that can fail tells you what an impressive number is actually
+measuring.
+
 ### Gradient-norm logging is cheap and decisive
 `clip_grad_norm_` already returns the pre-clip norm, so recording it costs
 nothing. It falsified the "gradients do not reach the projector" hypothesis in
@@ -113,14 +128,20 @@ Recording them prevents re-testing.
   construction with training. **[V]**
 - **Weak gradients.** Mean norm 829. **[V]**
 
+## Closed questions
+
+- **Do the frozen features carry the answers?** **Yes.** A linear probe gets
+  100% held-out accuracy on colour, shape and count, with shuffle controls at
+  chance. See `reports/m1b-feature-probe.md`. **[V]**
+
 ## Open
 
-- **[U] Why colour and shape do not learn while count is perfect.** Count is 6/6
-  at 0.95–1.0 confidence on train; colour 2/7, shape 2/7. Owner: implementation
-  agent. Closing step: the linear probe on frozen features.
-- **[U] Whether the frozen features carry colour at all.** A mean-pooled linear
-  probe is running; a positive result moves the problem to the projector path, a
-  negative one moves it to extraction.
+- **[U] Why a 25M-parameter projector cannot use information a 4096×8 linear layer
+  reads perfectly.** Owner: implementation agent. Closing step: a full run at
+  the learning rate that converges, with train exact-match logged rather than
+  loss alone.
+- **[U] Does the 256-token splice dilute the signal?** Closing step: compare a
+  single pooled visual token against the current 256-token injection.
 - **[U] Is gradient clipping at 1.0 harmful?** Norms of ~800 mean every step is
   clipped by ~800×. Adam is largely scale-invariant, so probably not, but this
   has not been measured.

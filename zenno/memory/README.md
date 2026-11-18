@@ -33,6 +33,7 @@ waiting to be rediscovered.
 | file | contents |
 | --- | --- |
 | [findings.md](findings.md) | running log: what works, what does not, what is open |
+| [`reports/m1b-feature-probe.md`](../../reports/m1b-feature-probe.md) | the decisive probe: answers are in the frozen features |
 
 Detailed write-ups live in `docs/measurement-pitfalls.md`,
 `reports/m1b-seed0-postmortem.md` and `DECISIONS/`; this folder points at them
