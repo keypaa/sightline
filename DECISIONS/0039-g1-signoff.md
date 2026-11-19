@@ -1,7 +1,7 @@
 # DECISION-0039: G1 sign-off
 
 Date: 2026-11-19
-Status: pending owner approval
+Status: accepted
 Work package: M1c
 
 ## Context
@@ -38,7 +38,7 @@ parser and prompts frozen (DECISIONS 0038).
 G1 passes on the frozen criteria: at least 2 of 3 tasks clear 30 points, McNemar
 p < 0.01, all three seeds positive, and all controls at chance.
 
-Approved by Keylhan Paumard--André on ______________.
+Approved by Keylhan Paumard--André on 19/11/2026.
 
 ## What this does and does not establish
 
