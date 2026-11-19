@@ -69,6 +69,26 @@ def mean_loss_gap(
     return sum(gaps) / len(gaps)
 
 
+def normalise_answer(text: str) -> str:
+    """The exact-match normalisation: case, surrounding space, trailing punctuation."""
+
+    return text.strip().lower().strip(" .!")
+
+
+def first_line_answer(text: str) -> str:
+    """Answer from the first line only, for models that keep talking.
+
+    A reader that answers correctly and then emits markdown scores zero under
+    exact match. This keeps the first line and applies the same normalisation.
+
+    It deliberately does not search for the target string anywhere in the
+    output: `'not red'` contains `red` and must stay wrong. A lenient parser
+    that finds substrings would score negated answers as correct.
+    """
+
+    return normalise_answer(text.splitlines()[0] if text.splitlines() else text)
+
+
 def mcnemar(a: torch.Tensor, b: torch.Tensor) -> dict:
     """Two-sided exact McNemar test on paired correctness booleans."""
 

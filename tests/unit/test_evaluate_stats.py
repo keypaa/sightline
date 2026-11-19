@@ -20,6 +20,25 @@ def test_wilson_interval_is_wide_at_small_n() -> None:
     assert (hi_small - lo_small) > (hi_big - lo_big)
 
 
+def test_first_line_drops_trailing_markdown() -> None:
+    from sightline.evaluate import first_line_answer
+
+    assert first_line_answer('diamond\n```json\n{\n  "') == "diamond"
+
+
+def test_first_line_rejects_a_negated_answer() -> None:
+    from sightline.evaluate import first_line_answer
+
+    assert first_line_answer("not red") == "not red"
+
+
+def test_first_line_handles_an_empty_generation() -> None:
+    from sightline.evaluate import first_line_answer
+
+    assert first_line_answer("") == ""
+    assert first_line_answer("   \n\n") == ""
+
+
 def test_control_below_chance_passes() -> None:
     lo, _ = wilson_interval(0, 500)
     assert lo <= CHANCE["color"]
