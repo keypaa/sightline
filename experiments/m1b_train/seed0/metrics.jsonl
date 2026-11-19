@@ -1,1 +1,5 @@
 {"elapsed_s": 5186.31, "event": "m1b", "final_loss": 5.024851500988007, "g1_pass": false, "max_gpu_memory_mb": 32361.2, "max_steps": 2048, "micro_batch": 16, "peak_rss_mb": 9526.4, "seed": 0}
+{"accuracy": {"color": 1.0, "count": 1.0, "shape": 1.0}, "event": "m1b_acc", "loss": 0.0002859756350517273, "seed": 0, "step": 500}
+{"accuracy": {"color": 1.0, "count": 1.0, "shape": 1.0}, "event": "m1b_acc", "loss": 3.865097369271098e-05, "seed": 0, "step": 1000}
+{"accuracy": {"color": 1.0, "count": 1.0, "shape": 1.0}, "event": "m1b_acc", "loss": 3.4561380743980408e-06, "seed": 0, "step": 1500}
+{"accuracy": {"color": 1.0, "count": 1.0, "shape": 1.0}, "event": "m1b_acc", "loss": 1.759268343448639e-06, "seed": 0, "step": 2000}
