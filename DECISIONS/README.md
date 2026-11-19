@@ -44,3 +44,4 @@ One short dated file per decision, named `NNNN-short-title.md` and based on `_te
 | 0036 | Single-token visual injection (test-only ablation) | M1b |
 | 0037 | `--seed` must seed the run, not just the paths | M1b |
 | 0038 | Keep the frozen parser and prompt for the G1 runs | M1c |
+| 0039 | G1 sign-off (pending owner approval) | M1c |
