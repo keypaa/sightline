@@ -27,6 +27,11 @@ parser and prompts frozen (DECISIONS 0038).
   > 0 on every one of those comparisons. [V]
 - All three seeds pass independently: colour and shape each clear the 30-point
   bar on all three seeds. [V]
+- Checkpoints (gitignored, held outside the repo) at step 2048 with projector,
+  optimizer, scheduler, RNG and step: [V]
+  - seed0 `99cc1cd75e6efb0c8abf8748baf607ce63e2c03742544fa41239a97a5a9b1d8f`
+  - seed1 `6d418c3201f9641f3b0736258d364202ec2123e21ef04dce6ed478ff5ab66591`
+  - seed2 `abb047d6fdd8c180217993c8c97ea97164b8c9819bd3a2563bd01d416a10eb0f`
 
 ## Decision
 
