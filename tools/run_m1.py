@@ -28,6 +28,7 @@ import argparse
 import contextlib
 import io
 import json
+import random
 import resource
 import time
 from dataclasses import dataclass
@@ -152,18 +153,36 @@ def generate_answer(model, tok, projector, prompt_ids, features, device):
     return tok.decode(generated[0], skip_special_tokens=True).strip().lower().strip(" .!")
 
 
-def sample_evenly(items: list, n: int | None) -> list:
-    """Take n items spread across the list.
+def sample_subset(items: list, n: int | None, seed: int = 0) -> list:
+    """Take n items at random, deterministically.
 
-    The M1 splits are ordered by answer (all reds, then greens, ...), so the
-    first n items are a biased sample: a model that always answers "red" scores
-    n/n on them and at chance overall. A stride keeps the answer mix.
+    The M1 splits are ordered by answer, so ``items[:n]`` is a biased sample and
+    a fixed stride can alias onto one class when the stride matches the ordering
+    period. A seeded shuffle is unbiased and reproducible.
     """
 
     if n is None or n >= len(items):
-        return items
-    step = len(items) / n
-    return [items[int(i * step)] for i in range(n)]
+        return list(items)
+    return random.Random(seed).sample(list(items), n)
+
+
+def build_fixed_eval(tok, encoder, examples, device, spec: VisualSpec, n: int = 64):
+    """A fixed evaluation subset: prompts and features encoded once."""
+
+    examples = sample_subset(list(examples), n, seed=0)
+    features = spec.prepare(torch.cat([encoder.encode([e.image]) for e in examples], dim=0))
+    prompts = [build_prompt(tok, example, device, spec) for example in examples]
+    return examples, features, prompts
+
+
+def exact_match(model, tok, projector, examples, features, prompts, device) -> dict:
+    """Greedy exact match per task over a fixed subset."""
+
+    hits: dict[str, list[bool]] = {}
+    for i, example in enumerate(examples):
+        got = generate_answer(model, tok, projector, prompts[i], features[i : i + 1], device)
+        hits.setdefault(example.task, []).append(got == example.answer)
+    return {task: round(sum(v) / len(v), 4) for task, v in hits.items()}
 
 
 def build_prompt(tok, example, device, spec: VisualSpec):
@@ -181,11 +200,12 @@ def debug_generations(
 ) -> None:
     """Print what the model actually says, to tell a decode bug from a mapping bug.
 
-    The examples are sampled evenly (see ``sample_evenly``): the first n of a
-    split are all one answer, which flatters a model with a colour prior.
+    The examples are sampled with a seeded shuffle (see ``sample_subset``): the
+    first n of a split are all one answer, which flatters a model with a colour
+    prior.
     """
 
-    examples = sample_evenly(list(examples), n)
+    examples = sample_subset(list(examples), n)
     features = spec.prepare(torch.cat([encoder.encode([e.image]) for e in examples], dim=0))
     for i, example in enumerate(examples):
         prompt_ids = build_prompt(tok, example, device, spec)
@@ -209,7 +229,7 @@ def debug_logits(model, tok, encoder, projector, examples, device, n, spec: Visu
     The examples are sampled evenly; the splits are ordered by answer.
     """
 
-    examples = sample_evenly(list(examples), n)
+    examples = sample_subset(list(examples), n)
     features = spec.prepare(torch.cat([encoder.encode([e.image]) for e in examples], dim=0))
     embed = model.get_input_embeddings()
     teacher_forced = 0
@@ -430,6 +450,12 @@ def main() -> int:
         help="train and print the loss/gradient summary, but skip the G1 evaluation",
     )
     parser.add_argument(
+        "--eval-every",
+        type=int,
+        default=0,
+        help="score greedy exact match on a fixed 64-example subset every N steps",
+    )
+    parser.add_argument(
         "--no-output-scale",
         action="store_true",
         help="skip matching the projector output RMS to the reader's embedding RMS",
@@ -546,6 +572,17 @@ def main() -> int:
                 )
         print("diagnostic self-check ok", flush=True)
 
+    fixed = None
+    if args.eval_every > 0:
+        fixed = build_fixed_eval(tok, encoder, dataset.train, "cuda", spec)
+        print(
+            "fixed eval subset: "
+            + json.dumps(
+                {t: sum(1 for e in fixed[0] if e.task == t) for t in ("color", "shape", "count")}
+            ),
+            flush=True,
+        )
+
     started = time.perf_counter()
     checkpoint = Path(f"artifacts/m1b/seed{args.seed}/projector.pt")
     progress = ProgressPrinter(
@@ -568,6 +605,20 @@ def main() -> int:
                     "step_s": info["step_s"],
                     "lr": args.lr,
                 }
+            )
+        if fixed is not None and info["step"] % args.eval_every == 0:
+            accuracy = exact_match(model, tok, trainer.projector, *fixed, "cuda")
+            record.append_metric(
+                {
+                    "event": "m1b_acc",
+                    "seed": args.seed,
+                    "step": info["step"],
+                    "accuracy": accuracy,
+                    "loss": info["loss"],
+                }
+            )
+            print(
+                f"[seed {args.seed}]  acc {json.dumps(accuracy)} at step {info['step']}", flush=True
             )
         if (
             args.save_every > 0
@@ -631,7 +682,7 @@ def main() -> int:
         trainer.train(max_steps=args.max_steps)
         trainer.save_checkpoint(checkpoint)
 
-    split = sample_evenly(list(getattr(dataset, args.eval_split)), args.eval_limit)
+    split = sample_subset(list(getattr(dataset, args.eval_split)), args.eval_limit)
 
     if args.no_eval:
         norms = [float(n) for n in list(trainer.grad_norms)[-25:]]

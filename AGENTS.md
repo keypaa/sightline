@@ -103,6 +103,7 @@ reports/            generated reports (small, diffable)
 - M1 resume: `PYTHONPATH=src python tools/run_m1.py --seed 0 --resume` (continues from `artifacts/m1b/seed<seed>/projector.pt`, restoring optimizer, scheduler, step and RNG).
 - M1 timing probe: `PYTHONPATH=src python tools/run_m1.py --seed 0 --probe-steps 20 --micro-batch 16` (2 untimed warmup steps, no checkpoint; writes `experiments/m1b_probe/micro16/`).
 - M1 gradient/loss trace: `PYTHONPATH=src python tools/run_m1.py --seed 0 --max-steps 200 --log-every 1 --track-grad-norm` (per-step loss and projector gradient norm in `metrics.jsonl`).
+- M1 learning curve: `PYTHONPATH=src python tools/run_m1.py --seed 0 --max-steps 2048 --lr 1e-3 --micro-batch 16 --eval-every 100` (greedy exact match on a fixed 64-example subset every 100 steps, logged as `m1b_acc`).
 - M1 LR sweep: `PYTHONPATH=src python tools/run_m1.py --seed 0 --max-steps 200 --lr-sweep 1e-4,3e-4,1e-3,3e-3 --track-grad-norm`.
 - M1 profiler: `PYTHONPATH=src python tools/profile_m1.py --n-examples 32 --micro-batch 4` (phase split, kernel table, batch scaling).
 - M1 eval: `PYTHONPATH=src python tools/run_m1.py --seed 0 --eval-only`.
