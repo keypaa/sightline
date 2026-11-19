@@ -67,6 +67,15 @@ single low loss value is not convergence — 0.02 was one step, not the average.
 `--save-every 200` with a write-to-`.tmp`-then-rename made an interrupted run
 resumable and made diagnostics cheap to re-ask. **[V]**
 
+### Colour generalises at LR 1e-3 — 85.5% on held-out test
+2048 steps, micro-batch 16, seed 0: colour **0.855** on test against 0.125
+chance, with blank, mismatched and no-tokens all at 0.000. Count reaches 0.953
+on val. Shape stays at chance (0.260). **[V]**
+**Why it matters:** the first real evidence that the frozen retrofit transmits
+visual information. The earlier 3e-4 run was undertrained, not broken.
+**Do not read the train-split numbers as generalisation**: train accuracy was
+1.000 on all three tasks and shape generalises not at all.
+
 ## What does not work
 
 ### Single-token visual injection — clearly worse
@@ -145,16 +154,17 @@ Recording them prevents re-testing.
 
 ## Open
 
-- **[U] Why the 256-token path fits the loss (0.023) yet answers only 10/20 under
-  teacher forcing.** Owner: implementation agent. Closing step: a 2048-step run
-  at LR 1e-3 that logs held-out exact match, not loss alone.
-- **[U] Whether the 256-token splice dilutes the signal.** Answered: no — single
-  token is far worse. Closed by `DECISIONS/0036`.
-- **[U] Is gradient clipping at 1.0 harmful?** Norms of ~800 mean every step is
-  clipped by ~800×. Adam is largely scale-invariant, so probably not, but this
-  has not been measured.
-- **[U] Should the G1 metric change to a lenient parser?** It would need a
-  DECISIONS entry and a seed re-run under both metrics. Not decided.
+- **[U] Why count falls from 0.953 on val to 0.318 on test.** Train and val use
+  counts 1–4, test uses 1–5, so count 5 is never trained; but that alone would
+  leave the score near 0.76, so counts 1–4 also degrade. Owner: implementation
+  agent. Closing step: per-count accuracy on both splits.
+- **[U] Why shape generalises not at all (0.260 on test, chance 0.25) while colour
+  reaches 0.855.** Owner: implementation agent. Closing step: a shape-only
+  control against a colour-only control.
+- **[U] Whether count 5 belongs in the test split** when train and val stop at 4.
+  Needs a DECISIONS entry.
+- **[U] Whether seeds 1 and 2 reproduce this at 1e-3.** Closing step: two more
+  runs, then `tools/g1_report.py` over all three.
 ### A diagnostic that runs after training must be rehearsed before it
 
 `debug_logits` was called without its new `spec` argument. The container trained
