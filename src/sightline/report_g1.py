@@ -21,12 +21,19 @@ from sightline.evaluate import g1_pass
 TASKS = ("color", "shape", "count")
 
 
-def load_g1_event(path: Path) -> dict[str, Any] | None:
-    """Return the last ``g1`` event in a metrics file, or None."""
+def load_g1_event(path: Path, split: str | None = None) -> dict[str, Any] | None:
+    """Return the last ``g1`` event in a metrics file, or None.
+
+    A run directory can hold several evaluations — test, then val, then a re-run
+    — and taking the last one silently reports whichever split ran most
+    recently. When ``split`` is given, prefer the last event for that split, and
+    fall back to the last event overall only when no event records a split at
+    all, which is the case for records written before ``eval_split`` was logged.
+    """
 
     if not path.exists():
         return None
-    found = None
+    events: list[dict[str, Any]] = []
     with path.open(encoding="utf-8") as handle:
         for line in handle:
             line = line.strip()
@@ -34,14 +41,22 @@ def load_g1_event(path: Path) -> dict[str, Any] | None:
                 continue
             record = json.loads(line)
             if record.get("event") == "g1":
-                found = record
-    return found
+                events.append(record)
+    if not events:
+        return None
+    if split is not None:
+        for record in reversed(events):
+            if record.get("eval_split") == split:
+                return record
+        if any("eval_split" in record for record in events):
+            return None
+    return events[-1]
 
 
-def load_seed(root: Path, seed: int) -> dict[str, Any] | None:
-    """Read the last ``g1`` event for a seed from ``<root>/seed<seed>/metrics.jsonl``."""
+def load_seed(root: Path, seed: int, split: str | None = None) -> dict[str, Any] | None:
+    """Read a seed's ``g1`` event from ``<root>/seed<seed>/metrics.jsonl``."""
 
-    return load_g1_event(root / f"seed{seed}" / "metrics.jsonl")
+    return load_g1_event(root / f"seed{seed}" / "metrics.jsonl", split)
 
 
 def summarise(events: dict[int, dict[str, Any] | None], seeds: Sequence[int]) -> dict[str, Any]:
@@ -92,11 +107,16 @@ def summarise(events: dict[int, dict[str, Any] | None], seeds: Sequence[int]) ->
     }
 
 
-def render_markdown(summary: dict[str, Any], sources: dict[int, Path]) -> str:
+def render_markdown(
+    summary: dict[str, Any], sources: dict[int, Path], split: str | None = None
+) -> str:
     lines = [
         "# G1 report: M1b trained projector on held-out M1 data",
         "",
         f"Generated: {datetime.now(UTC).strftime('%Y-%m-%d %H:%M UTC')}",
+        "",
+        f"Evaluation split: **{split}**" if split else "Evaluation split: last recorded",
+        "",
         "",
         "Thresholds are frozen in `DECISIONS/0032` and implemented in",
         "`sightline.evaluate`: correct minus the best of blank/mismatched/no-tokens",
@@ -157,10 +177,12 @@ def render_markdown(summary: dict[str, Any], sources: dict[int, Path]) -> str:
     return "\n".join(lines)
 
 
-def build_report(root: Path, seeds: Sequence[int]) -> tuple[str, dict[int, Path]]:
-    events = {seed: load_seed(root, seed) for seed in seeds}
+def build_report(
+    root: Path, seeds: Sequence[int], split: str | None = None
+) -> tuple[str, dict[int, Path]]:
+    events = {seed: load_seed(root, seed, split) for seed in seeds}
     summary = summarise(events, seeds)
     sources = {
         seed: root / f"seed{seed}" / "metrics.jsonl" for seed in seeds if events[seed] is not None
     }
-    return render_markdown(summary, sources), summary
+    return render_markdown(summary, sources, split), summary

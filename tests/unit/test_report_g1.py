@@ -108,3 +108,42 @@ def test_build_report_renders_missing_seeds_honestly(tmp_path: Path) -> None:
     assert summary["g1_pass"] is False
     assert "**G1: FAIL or incomplete**" in markdown
     assert "Seeds with no G1 event yet: 1, 2" in markdown
+
+
+def test_load_g1_event_prefers_the_requested_split(tmp_path: Path) -> None:
+    from sightline.report_g1 import load_g1_event
+
+    path = tmp_path / "metrics.jsonl"
+    path.write_text(
+        "\n".join(
+            json.dumps(record)
+            for record in (
+                {"event": "g1", "seed": 0, "eval_split": "test", "report": {"from": "test"}},
+                {"event": "m1b", "seed": 0},
+                {"event": "g1", "seed": 0, "eval_split": "val", "report": {"from": "val"}},
+            )
+        )
+        + "\n"
+    )
+
+    assert load_g1_event(path, "test")["report"] == {"from": "test"}
+    assert load_g1_event(path, "val")["report"] == {"from": "val"}
+    assert load_g1_event(path, "train") is None
+
+
+def test_load_g1_event_falls_back_for_records_without_a_split(tmp_path: Path) -> None:
+    from sightline.report_g1 import load_g1_event
+
+    path = tmp_path / "metrics.jsonl"
+    path.write_text(
+        "\n".join(
+            json.dumps(record)
+            for record in (
+                {"event": "g1", "seed": 1, "report": {"from": "test"}},
+                {"event": "g1", "seed": 1, "report": {"from": "later"}},
+            )
+        )
+        + "\n"
+    )
+
+    assert load_g1_event(path, "test")["report"] == {"from": "later"}

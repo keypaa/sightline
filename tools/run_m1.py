@@ -793,6 +793,7 @@ def main() -> int:
             "event": "g1",
             "seed": args.seed,
             "g1_pass": eval_result["g1_pass"],
+            "eval_split": args.eval_split,
             "report": eval_result["report"],
         }
     )
