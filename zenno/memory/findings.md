@@ -67,14 +67,29 @@ single low loss value is not convergence — 0.02 was one step, not the average.
 `--save-every 200` with a write-to-`.tmp`-then-rename made an interrupted run
 resumable and made diagnostics cheap to re-ask. **[V]**
 
-### Colour generalises at LR 1e-3 — 85.5% on held-out test
-2048 steps, micro-batch 16, seed 0: colour **0.855** on test against 0.125
-chance, with blank, mismatched and no-tokens all at 0.000. Count reaches 0.953
-on val. Shape stays at chance (0.260). **[V]**
-**Why it matters:** the first real evidence that the frozen retrofit transmits
-visual information. The earlier 3e-4 run was undertrained, not broken.
-**Do not read the train-split numbers as generalisation**: train accuracy was
-1.000 on all three tasks and shape generalises not at all.
+### Colour and shape generalise at LR 1e-3 with real seeding
+Seed 0, 2048 steps, held-out test: colour **0.8125** (chance 0.125), shape
+**0.8066** (chance 0.25), all controls 0.000. Val: colour 0.697, shape 0.625.
+Both are *higher* on test than on val. **[V]**
+**Why it matters:** first solid evidence that the frozen retrofit transmits
+visual information. The earlier seed-0/seed-1 spread (shape 0.260 vs 0.955) was
+nondeterminism plus a seed-less init, not a property of the method.
+**Do not read the train-split numbers as generalisation**: train accuracy is
+1.000 on all three tasks.
+
+### A task can fail on an unseen question phrasing while working on val
+Count scores 0.969/0.797/0.617/0.203 for counts 1–4 on val and **0.000 on every
+count on test**. Teacher-forced top-1 at the answer position is `'The'` (0.905),
+not a digit: the model produces prose for `"Count the shapes."` but digits for
+`"How many shapes do you see?"`. **[V]** `DECISIONS/0038`.
+**Why:** the three splits use three different templates, so test measures
+generalisation to an unseen phrasing. The failure is phrasing-specific behaviour,
+not absent visual information.
+
+### A weak class can hide inside a strong average
+Magenta scores **0.078** on test and 0.172 on val while the other seven colours
+sit at 0.80–0.98. **[V]** A per-task average of 0.81 conceals it; always read
+`answer_breakdown`.
 
 ## What does not work
 
@@ -154,17 +169,16 @@ Recording them prevents re-testing.
 
 ## Open
 
-- **[U] Why count falls from 0.953 on val to 0.318 on test.** Train and val use
-  counts 1–4, test uses 1–5, so count 5 is never trained; but that alone would
-  leave the score near 0.76, so counts 1–4 also degrade. Owner: implementation
-  agent. Closing step: per-count accuracy on both splits.
-- **[U] Why shape generalises not at all (0.260 on test, chance 0.25) while colour
-  reaches 0.855.** Owner: implementation agent. Closing step: a shape-only
-  control against a colour-only control.
-- **[U] Whether count 5 belongs in the test split** when train and val stop at 4.
-  Needs a DECISIONS entry.
-- **[U] Whether seeds 1 and 2 reproduce this at 1e-3.** Closing step: two more
-  runs, then `tools/g1_report.py` over all three.
+- **[U] How many shape answers the parser loses to trailing content.** One debug
+  example produced `'diamond\n```json\n{\n  "'` with `diamond` at 0.998, scored
+  wrong. Owner: implementation agent. Closing step: re-score all three seeds under
+  a first-line parser and report both numbers.
+- **[U] Why magenta sits at 0.078 while other colours sit at 0.80–0.98.** Owner:
+  implementation agent. Closing step: a magenta-only probe.
+- **[U] Whether count generalises with one question template across all splits.**
+  Closing step: a run with a consistent count template.
+- **[U] Whether seeds 1 and 2 reproduce colour and shape at 1e-3.** Closing step:
+  two more runs, then `tools/g1_report.py` over all three.
 ### A diagnostic that runs after training must be rehearsed before it
 
 `debug_logits` was called without its new `spec` argument. The container trained
