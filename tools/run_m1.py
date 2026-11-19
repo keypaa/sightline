@@ -215,6 +215,13 @@ def exact_match(model, tok, projector, examples, features, prompts, device) -> d
     return {task: round(sum(v) / len(v), 4) for task, v in hits.items()}
 
 
+def filter_examples(examples: list, answer: str) -> list:
+    """Keep only the examples whose answer matches, case-insensitively."""
+
+    wanted = answer.strip().lower()
+    return [e for e in examples if e.answer.strip().lower() == wanted]
+
+
 def build_prompt(tok, example, device, spec: VisualSpec):
     text = tok.apply_chat_template(
         [{"role": "user", "content": spec.placeholder + example.question}],
@@ -512,6 +519,12 @@ def main() -> int:
         help="answer normaliser; exact is the frozen G1 rule",
     )
     parser.add_argument(
+        "--filter-answer",
+        type=str,
+        default=None,
+        help="restrict debug runs to examples with this answer, e.g. magenta",
+    )
+    parser.add_argument(
         "--no-eval",
         action="store_true",
         help="train and print the loss/gradient summary, but skip the G1 evaluation",
@@ -752,6 +765,10 @@ def main() -> int:
         trainer.save_checkpoint(checkpoint)
 
     split = sample_subset(list(getattr(dataset, args.eval_split)), args.eval_limit)
+    if args.filter_answer:
+        split = filter_examples(split, args.filter_answer)
+        if not split:
+            raise SystemExit(f"--filter-answer {args.filter_answer!r} matched no examples")
 
     if args.no_eval:
         norms = [float(n) for n in list(trainer.grad_norms)[-25:]]

@@ -126,3 +126,23 @@ def test_unknown_parser_is_rejected() -> None:
 
     with pytest.raises(ValueError):
         runner.answer_parser("lenient")
+
+
+def test_filter_answer_keeps_only_matching_examples() -> None:
+    runner = load_runner()
+    examples = [
+        SimpleNamespace(task="color", answer="magenta"),
+        SimpleNamespace(task="color", answer="red"),
+        SimpleNamespace(task="color", answer="magenta"),
+    ]
+
+    kept = runner.filter_examples(examples, "magenta")
+
+    assert [e.answer for e in kept] == ["magenta", "magenta"]
+
+
+def test_filter_answer_is_case_insensitive() -> None:
+    runner = load_runner()
+    examples = [SimpleNamespace(task="color", answer="Magenta")]
+
+    assert runner.filter_examples(examples, "magenta") == examples
