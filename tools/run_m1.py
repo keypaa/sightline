@@ -43,7 +43,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from sightline.backbone import splice
 from sightline.config import Config, resolve_config
 from sightline.data.m1_synthetic import generate_m1_dataset
-from sightline.evaluate import g1_pass, g1_report
+from sightline.evaluate import first_line_answer, g1_pass, g1_report, normalise_answer
 from sightline.generate import generate_new_tokens
 from sightline.progress import ProgressPrinter
 from sightline.projector import Projector, calibrate_output_scale
@@ -139,7 +139,20 @@ def build_batches(examples, features, tok, device, micro_batch, spec: VisualSpec
     return [merge(singles[i : i + micro_batch]) for i in range(0, len(singles), micro_batch)]
 
 
-def generate_answer(model, tok, projector, prompt_ids, features, device):
+def answer_parser(name: str):
+    """Return the answer normaliser named by ``--parser``.
+
+    ``exact`` is the frozen G1 rule and stays the default. ``first-line`` is the
+    diagnostic that scores an answer followed by trailing markdown.
+    """
+
+    parsers = {"exact": normalise_answer, "first-line": first_line_answer}
+    if name not in parsers:
+        raise ValueError(f"unknown parser {name!r}; choose from {sorted(parsers)}")
+    return parsers[name]
+
+
+def generate_answer(model, tok, projector, prompt_ids, features, device, parser=normalise_answer):
     with torch.no_grad():
         visual = projector(features.float())
         inputs_embeds = splice(prompt_ids, visual, IMAGE_PAD, model.get_input_embeddings().weight)
@@ -151,7 +164,7 @@ def generate_answer(model, tok, projector, prompt_ids, features, device):
             eos_token_id=tok.eos_token_id,
             pad_token_id=tok.pad_token_id,
         )
-    return tok.decode(generated[0], skip_special_tokens=True).strip().lower().strip(" .!")
+    return parser(tok.decode(generated[0], skip_special_tokens=True))
 
 
 def sample_subset(items: list, n: int | None, seed: int = 0) -> list:
@@ -301,7 +314,9 @@ def answer_breakdown(examples, indices, correct) -> dict[str, float]:
     return {answer: round(sum(v) / len(v), 4) for answer, v in sorted(buckets.items())}
 
 
-def evaluate(model, tok, encoder, projector, examples, device, spec: VisualSpec):
+def evaluate(
+    model, tok, encoder, projector, examples, device, spec: VisualSpec, parser=normalise_answer
+):
     features = spec.prepare(torch.cat([encoder.encode([e.image]) for e in examples], dim=0))
     blank = Image.new("RGB", (448, 448), (255, 255, 255))
     blank_features = spec.prepare(encoder.encode([blank]))
@@ -332,17 +347,23 @@ def evaluate(model, tok, encoder, projector, examples, device, spec: VisualSpec)
         correct, blank_c, mismatched_c, no_tokens_c, untrained_c = [], [], [], [], []
         for i in indices:
             example = examples[i]
-            answer = generate_answer(model, tok, projector, prompts[i], features[i : i + 1], device)
+            answer = generate_answer(
+                model, tok, projector, prompts[i], features[i : i + 1], device, parser
+            )
             correct.append(answer == example.answer)
 
-            answer = generate_answer(model, tok, projector, prompts[i], blank_features, device)
+            answer = generate_answer(
+                model, tok, projector, prompts[i], blank_features, device, parser
+            )
             blank_c.append(answer == example.answer)
 
             j = next(
                 (k for k in indices if k != i and examples[k].answer != example.answer),
                 i,
             )
-            answer = generate_answer(model, tok, projector, prompts[i], features[j : j + 1], device)
+            answer = generate_answer(
+                model, tok, projector, prompts[i], features[j : j + 1], device, parser
+            )
             mismatched_c.append(answer == example.answer)
 
             with torch.no_grad():
@@ -353,10 +374,12 @@ def evaluate(model, tok, encoder, projector, examples, device, spec: VisualSpec)
                     eos_token_id=tok.eos_token_id,
                     pad_token_id=tok.pad_token_id,
                 )
-            answer = tok.decode(generated[0], skip_special_tokens=True).strip().lower().strip(" .!")
+            answer = parser(tok.decode(generated[0], skip_special_tokens=True))
             no_tokens_c.append(answer == example.answer)
 
-            answer = generate_answer(model, tok, untrained, prompts[i], features[i : i + 1], device)
+            answer = generate_answer(
+                model, tok, untrained, prompts[i], features[i : i + 1], device, parser
+            )
             untrained_c.append(answer == example.answer)
 
         breakdown[task] = answer_breakdown(examples, indices, correct)
@@ -481,6 +504,12 @@ def main() -> int:
         type=str,
         default=None,
         help="comma-separated learning rates; run each for --max-steps and compare",
+    )
+    parser.add_argument(
+        "--parser",
+        choices=("exact", "first-line"),
+        default="exact",
+        help="answer normaliser; exact is the frozen G1 rule",
     )
     parser.add_argument(
         "--no-eval",
@@ -756,7 +785,8 @@ def main() -> int:
         )
         return 0
 
-    eval_result = evaluate(model, tok, encoder, trainer.projector, split, "cuda", spec)
+    answer_norm = answer_parser(args.parser)
+    eval_result = evaluate(model, tok, encoder, trainer.projector, split, "cuda", spec, answer_norm)
     usage = resource.getrusage(resource.RUSAGE_SELF)
     summary = {
         "seed": args.seed,
@@ -764,6 +794,7 @@ def main() -> int:
         "micro_batch": args.micro_batch,
         "trim_logits": not args.no_trim_logits,
         "eval_split": args.eval_split,
+        "parser": args.parser,
         "eval_limit": args.eval_limit,
         "final_loss": trainer.losses[-1] if trainer.losses else None,
         "loss_every_100": trainer.losses[::100] if trainer.losses else [],
@@ -794,6 +825,7 @@ def main() -> int:
             "seed": args.seed,
             "g1_pass": eval_result["g1_pass"],
             "eval_split": args.eval_split,
+            "parser": args.parser,
             "report": eval_result["report"],
         }
     )

@@ -107,3 +107,22 @@ def test_set_seeds_makes_runs_reproducible_and_distinct() -> None:
 
     runner.set_seeds(2)
     assert not torch.equal(first, torch.randn(4))
+
+
+def test_parser_choice_selects_the_normaliser() -> None:
+    runner = load_runner()
+
+    exact = runner.answer_parser("exact")
+    first_line = runner.answer_parser("first-line")
+
+    assert exact("diamond\n```json") == "diamond\n```json"
+    assert first_line("diamond\n```json") == "diamond"
+
+
+def test_unknown_parser_is_rejected() -> None:
+    import pytest
+
+    runner = load_runner()
+
+    with pytest.raises(ValueError):
+        runner.answer_parser("lenient")
