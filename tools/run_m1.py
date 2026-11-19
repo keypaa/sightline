@@ -35,6 +35,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from statistics import median
 
+import numpy as np
 import torch
 from PIL import Image
 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -164,6 +165,22 @@ def sample_subset(items: list, n: int | None, seed: int = 0) -> list:
     if n is None or n >= len(items):
         return list(items)
     return random.Random(seed).sample(list(items), n)
+
+
+def set_seeds(seed: int) -> None:
+    """Seed every source of randomness the runner uses.
+
+    ``--seed`` has to reach the projector initialisation and the batch order, or
+    three "seeds" are the same run repeated and differ only by GPU
+    nondeterminism. The dataset stays at seed 0: the benchmark split is fixed,
+    what varies per seed is the initialisation and the order of presentation.
+    """
+
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
 
 
 def build_fixed_eval(tok, encoder, examples, device, spec: VisualSpec, n: int = 64):
@@ -522,9 +539,11 @@ def main() -> int:
     )
     base = build_batches(dataset.train, train_features, tok, "cuda", args.micro_batch, spec)
     del train_features
+    # The benchmark split is fixed; the order it is presented in varies per seed.
+    random.Random(args.seed).shuffle(base)
 
     def make_trainer(lr: float) -> Trainer:
-        torch.manual_seed(123)
+        set_seeds(args.seed)
         projector = Projector(input_width=4096, reader_width=2048)
         trainer = Trainer(
             model,

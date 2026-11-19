@@ -95,3 +95,15 @@ def test_answer_breakdown_splits_by_answer_value() -> None:
     breakdown = runner.answer_breakdown(examples, [0, 1, 2, 3], [True, False, False, False])
 
     assert breakdown == {"1": 0.5, "5": 0.0}
+
+
+def test_set_seeds_makes_runs_reproducible_and_distinct() -> None:
+    runner = load_runner()
+
+    runner.set_seeds(1)
+    first = torch.randn(4)
+    runner.set_seeds(1)
+    assert torch.equal(first, torch.randn(4))
+
+    runner.set_seeds(2)
+    assert not torch.equal(first, torch.randn(4))
