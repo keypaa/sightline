@@ -7,8 +7,8 @@
   },
   "code": {
     "branch": "m1c-eval",
-    "commit": "806b5f1ccac4b2f6216257ac91455aa5298cd1a1",
-    "dirty": false
+    "commit": "59d240afcc54bc6e5181d69985c370a347e41140",
+    "dirty": true
   },
   "config": {
     "encoder": {
@@ -67,7 +67,7 @@
       "weight_decay": 0.1
     }
   },
-  "created_utc": "2026-11-19T14:18:59.523484+00:00",
+  "created_utc": "2026-11-19T15:50:03.408740+00:00",
   "dry_run": false,
   "dtypes": {
     "autocast": "bfloat16",
@@ -111,7 +111,7 @@
     }
   },
   "outcome": "M1b: training + G1 evaluation",
-  "run_id": "20261119T141859Z-806b5f1",
+  "run_id": "20261119T155003Z-59d240a",
   "runtime": {
     "derived_at_runtime": true,
     "k3_tower_width": 4096,
