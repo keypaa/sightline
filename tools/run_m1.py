@@ -270,6 +270,20 @@ def chance_rates(examples) -> dict[str, float]:
     return {task: 1.0 / len(options) for task, options in answers.items()}
 
 
+def answer_breakdown(examples, indices, correct) -> dict[str, float]:
+    """Accuracy of the correct condition, split by answer value.
+
+    The count task is the reason this exists: train and val use counts 1-4 while
+    test uses 1-5, so an aggregate score cannot distinguish "the model cannot
+    count" from "the model has never seen five".
+    """
+
+    buckets: dict[str, list[bool]] = {}
+    for i, hit in zip(indices, correct, strict=True):
+        buckets.setdefault(examples[i].answer, []).append(bool(hit))
+    return {answer: round(sum(v) / len(v), 4) for answer, v in sorted(buckets.items())}
+
+
 def evaluate(model, tok, encoder, projector, examples, device, spec: VisualSpec):
     features = spec.prepare(torch.cat([encoder.encode([e.image]) for e in examples], dim=0))
     blank = Image.new("RGB", (448, 448), (255, 255, 255))
@@ -295,6 +309,7 @@ def evaluate(model, tok, encoder, projector, examples, device, spec: VisualSpec)
 
     untrained = Projector(input_width=4096, reader_width=2048).to(device)
     per_task = {}
+    breakdown = {}
     for task in ("color", "shape", "count"):
         indices = [i for i, e in enumerate(examples) if e.task == task]
         correct, blank_c, mismatched_c, no_tokens_c, untrained_c = [], [], [], [], []
@@ -327,6 +342,7 @@ def evaluate(model, tok, encoder, projector, examples, device, spec: VisualSpec)
             answer = generate_answer(model, tok, untrained, prompts[i], features[i : i + 1], device)
             untrained_c.append(answer == example.answer)
 
+        breakdown[task] = answer_breakdown(examples, indices, correct)
         per_task[task] = {
             "correct": correct,
             "blank": blank_c,
@@ -336,7 +352,12 @@ def evaluate(model, tok, encoder, projector, examples, device, spec: VisualSpec)
         }
 
     report = g1_report(per_task, chance_rates(examples))
-    return {"report": report, "g1_pass": g1_pass(report), "per_task": per_task}
+    return {
+        "report": report,
+        "g1_pass": g1_pass(report),
+        "per_task": per_task,
+        "answer_breakdown": breakdown,
+    }
 
 
 def sweep_summary(trainer, window: int = 25) -> dict:
@@ -764,7 +785,11 @@ def main() -> int:
         json.dumps(
             {
                 **summary,
-                "eval": {"report": eval_result["report"], "g1_pass": eval_result["g1_pass"]},
+                "eval": {
+                    "report": eval_result["report"],
+                    "g1_pass": eval_result["g1_pass"],
+                    "answer_breakdown": eval_result["answer_breakdown"],
+                },
             },
             indent=2,
         )

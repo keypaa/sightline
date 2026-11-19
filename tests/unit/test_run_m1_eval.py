@@ -81,3 +81,17 @@ def test_exact_match_reports_every_task() -> None:
     accuracy = runner.exact_match(model, StubTok(), projector, examples, features, prompts, "cpu")
 
     assert accuracy == {"color": 1.0, "shape": 0.0}
+
+
+def test_answer_breakdown_splits_by_answer_value() -> None:
+    runner = load_runner()
+    examples = [
+        SimpleNamespace(task="count", answer="1"),
+        SimpleNamespace(task="count", answer="1"),
+        SimpleNamespace(task="count", answer="5"),
+        SimpleNamespace(task="count", answer="5"),
+    ]
+
+    breakdown = runner.answer_breakdown(examples, [0, 1, 2, 3], [True, False, False, False])
+
+    assert breakdown == {"1": 0.5, "5": 0.0}
