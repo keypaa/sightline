@@ -6,7 +6,7 @@ as of 2026-11-21.
 | # | item | status | evidence |
 | --- | --- | --- | --- |
 | 6 | Embedding-alignment init | **closed, negative** | `tools/token_overlap.py` |
-| 7 | Data sources and licenses | open | this file |
+| 7 | Data sources and licenses | **drafted** | this file; per-source table complete, per-image checks open |
 | 8 | Annotator choice, terms and cost | **closed** | `DECISIONS/0040`, `reports/m2a-annotator-pilot.md` |
 
 ## 6. Token overlap between the K3 encoder tokenizer and Qwen3
@@ -55,5 +55,39 @@ tokens per conversation, 127M for 40k, inside the 200M/day cap. Pricing still
 
 ## 7. Data sources and licenses
 
-Open. Each source must be verified for availability and license before download;
-no source enters without a recorded license.
+Verified 2026-11-21 from each source's own terms page. The headline licence on a
+dataset card usually covers the **annotations**, not the pixels — COCO is the
+clear case, and the same trap applies to most image datasets.
+
+| source | annotations | images | verdict for M2a |
+| --- | --- | --- | --- |
+| **COCO** | CC BY 4.0 | **not owned by the consortium**; each photo keeps its Flickr licence, recorded per image in the annotation file | usable, but **requires per-image licence review** |
+| **Flickr30k** | captions free to use | Flickr images, provided for **non-commercial research and education only** | research use only; **not** for anything commercial |
+| **PixMo** (Ai2) | **ODC-BY-1.0** | distributed as **URLs**, fetched from third-party hosts; rights unknown per image | annotations usable with attribution; **image provenance is the risk** |
+| **The Cauldron** (HF M4) | **CC BY 4.0** for the collection and prompts | redistributed inside, but **50 sub-datasets each keep their own licence** | usable with **per-subset review**; terms require disclosing use if a model is trained |
+
+Sources: `cocodataset.org/#termsofuse`; the Flickr30k providers' own statement;
+`huggingface.co/datasets/allenai/pixmo-points`; `huggingface.co/datasets/HuggingFaceM4/the_cauldron`. [V]
+
+### Consequences for M2a
+
+- **"CC BY 4.0" on a card is not permission for the photographs.** COCO's own
+  terms say the consortium does not own image copyright. Any pipeline that
+  assumes otherwise is wrong.
+- **COCO is the best-behaved source** because it ships a licence id per image, so
+  the review can be automated rather than manual. That is a concrete reason to
+  prefer it.
+- **Flickr30k is out** for any commercial use, and its third-party CC0 re-uploads
+  do not change the original providers' non-commercial statement.
+- **PixMo's and Cauldron's images need provenance work before download**, not
+  after. The Cauldron's 50 sub-licences make it the highest-effort option.
+- Every source that enters gets a row in the manifest with its licence id and the
+  per-image or per-subset check recorded. No source enters without one.
+
+### Open items
+
+- [U] The Cauldron's per-subset licences (50 of them). Owner: implementation
+  agent. Closing step: enumerate the subsets M2a would actually use and record
+  each licence.
+- [U] PixMo image provenance at scale. Closing step: sample 100 image URLs and
+  record host and licence status.
