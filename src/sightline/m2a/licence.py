@@ -15,12 +15,9 @@ from __future__ import annotations
 import re
 from typing import Any
 
-_NON_COMMERCIAL = re.compile(r"(^|[^a-z])nc([^a-z]|$)")
-_NO_DERIVATIVES = re.compile(r"(^|[^a-z])nd([^a-z]|$)")
 
-
-def normalise(name: str | None) -> str:
-    """Case-fold and collapse separators so 'CC-BY 4.0' and 'cc by 4.0' match."""
+def _normalise(name: str | None) -> str:
+    """Case-fold and collapse separators, so 'CC-BY 4.0' and 'cc by 4.0' match."""
 
     if not name:
         return ""
@@ -28,14 +25,22 @@ def normalise(name: str | None) -> str:
 
 
 def drop_reason(name: str | None) -> str | None:
-    """Why this licence is unusable, or None when it passes the policy."""
+    """Why this licence is unusable, or None when it passes the policy.
+
+    COCO's own names are the test: ``Attribution-NonCommercial License``,
+    ``Attribution-NonCommercial-NoDerivs License``, ``Attribution-NoDerivs
+    License``. Matching only a bare ``nc`` or ``nd`` token misses all of them,
+    because the words embed the letters.
+    """
 
     if not name:
         return "missing-licence"
     squashed = re.sub(r"[^a-z0-9]+", " ", name.lower()).strip()
-    if _NON_COMMERCIAL.search(f" {squashed} "):
+    compact = squashed.replace(" ", "")
+    tokens = set(squashed.split())
+    if "noncommercial" in compact or "nc" in tokens:
         return "non-commercial"
-    if _NO_DERIVATIVES.search(f" {squashed} "):
+    if "noderivs" in compact or "noderivatives" in compact or "nd" in tokens:
         return "no-derivatives"
     return None
 
@@ -49,18 +54,15 @@ def classify(
     checks are applied first, so the policy cannot be bypassed.
     """
 
-    allowed = {normalise(name) for name in allow} if allow is not None else None
+    allowed = {_normalise(name) for name in allow} if allow is not None else None
 
     kept: list[dict[str, Any]] = []
     dropped: list[dict[str, Any]] = []
     for record in records:
         reason = drop_reason(record.get("license_name"))
-        if (
-            reason is None
-            and allowed is not None
-            and normalise(record.get("license_name")) not in allowed
-        ):
-            reason = "not-in-allow-list"
+        if reason is None and allowed is not None:
+            if _normalise(record.get("license_name")) not in allowed:
+                reason = "not-in-allow-list"
         if reason is None:
             kept.append(record)
         else:

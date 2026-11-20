@@ -66,3 +66,27 @@ def test_names_are_matched_case_insensitively() -> None:
 
     assert len(kept) == 2
     assert dropped[0]["drop_reason"] == "non-commercial"
+
+
+def test_the_real_coco_licence_names_are_handled() -> None:
+    """COCO's own names, from instances_train2017.json."""
+
+    records = [
+        {"file_name": "1.jpg", "license_name": "Attribution-NonCommercial-ShareAlike License"},
+        {"file_name": "2.jpg", "license_name": "Attribution-NonCommercial License"},
+        {"file_name": "3.jpg", "license_name": "Attribution-NonCommercial-NoDerivs License"},
+        {"file_name": "4.jpg", "license_name": "Attribution License"},
+        {"file_name": "5.jpg", "license_name": "Attribution-ShareAlike License"},
+        {"file_name": "6.jpg", "license_name": "Attribution-NoDerivs License"},
+        {"file_name": "7.jpg", "license_name": "No known copyright restrictions"},
+        {"file_name": "8.jpg", "license_name": "United States Government Work"},
+    ]
+
+    kept, dropped = classify(records)
+
+    assert {r["file_name"] for r in kept} == {"4.jpg", "5.jpg", "7.jpg", "8.jpg"}
+    reasons = {r["file_name"]: r["drop_reason"] for r in dropped}
+    assert reasons["1.jpg"] == "non-commercial"
+    assert reasons["2.jpg"] == "non-commercial"
+    assert reasons["3.jpg"] == "non-commercial"
+    assert reasons["6.jpg"] == "no-derivatives"
