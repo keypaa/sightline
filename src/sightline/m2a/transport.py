@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import re
 import subprocess
+import sys
 import threading
 import time
 from collections.abc import Callable
@@ -238,9 +239,11 @@ def retry_loop(
             break
         if not guard.rate_limited:
             reporter(f"[retry] stopped: {guard.reason}")
+            sys.stdout.flush()
             break
         if waits >= max_waits:
             reporter(f"[retry] stopped: {max_waits} waits exhausted")
+            sys.stdout.flush()
             break
 
         waits += 1
@@ -248,6 +251,9 @@ def retry_loop(
             f"[retry] quota window {waits}/{max_waits}: "
             f"{completed} done, {len(remaining)} left; waiting {wait_seconds}s"
         )
+        # A redirected log is block-buffered; without this the wait line would
+        # stay invisible for the whole hour.
+        sys.stdout.flush()
         sleeper(wait_seconds)
 
     return completed, waits
