@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import subprocess
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -26,7 +25,7 @@ from pathlib import Path
 from sightline.m2a.coco_index import read_annotations
 from sightline.m2a.images import content_hash, dedupe, dhash, fetch
 from sightline.m2a.licence import classify
-from sightline.m2a.manifest import manifest, splits
+from sightline.m2a.manifest import manifest, splits, usable_records
 from sightline.m2a.sample import sample_subset
 
 COCO_IMAGE_URL = "http://images.cocodataset.org/train2017/"
@@ -121,13 +120,12 @@ def _get(url: str) -> bytes:
 
 
 def cmd_annotate(args: argparse.Namespace) -> int:
-    from concurrent.futures import ThreadPoolExecutor, as_completed
-
-    from sightline.m2a.annotate import annotate_one
+    from sightline.m2a.annotate import annotate_one, pending_records
+    from sightline.m2a.transport import RateLimitGuard, cli_call, run_pool
 
     incoming = read_jsonl(args.root / "fetched.jsonl")
-    done = {row["id"] for row in read_jsonl(args.root / "conversations.jsonl")}
-    pending = [r for r in incoming if r["id"] not in done]
+    done_rows = read_jsonl(args.root / "conversations.jsonl")
+    pending = pending_records(incoming, done_rows)
     if args.limit:
         pending = pending[: args.limit]
 
@@ -137,65 +135,44 @@ def cmd_annotate(args: argparse.Namespace) -> int:
     unparsed = 0
 
     def work(record):
-        result = annotate_one(args.model, Path(record["path"]), _call)
+        result = annotate_one(args.model, Path(record["path"]), cli_call)
         row = {k: v for k, v in record.items() if k != "path"}
         row.update(result)
         return row
 
-    with ThreadPoolExecutor(max_workers=args.workers) as pool:
-        futures = [pool.submit(work, record) for record in pending]
-        for future in as_completed(futures):
-            row = future.result()
-            with lock:
-                with out.open("a", encoding="utf-8") as handle:
-                    handle.write(json.dumps(row) + "\n")
-                finished += 1
-                unparsed += int(not row["parsed"])
-                if finished % 50 == 0:
-                    print(f"[annotate] {finished}/{len(pending)} unparsed={unparsed}", flush=True)
+    def on_row(row):
+        nonlocal finished, unparsed
+        with lock:
+            with out.open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps(row) + "\n")
+            finished += 1
+            unparsed += int(not row["parsed"])
+            if finished % 50 == 0:
+                print(f"[annotate] {finished}/{len(pending)} unparsed={unparsed}", flush=True)
+
+    guard = RateLimitGuard(empty_limit=args.empty_limit)
+    completed = run_pool(pending, work, on_row, workers=args.workers, guard=guard)
 
     report(
-        "annotate", len(incoming), finished, unparsed, already_done=len(done), workers=args.workers
+        "annotate",
+        len(incoming),
+        completed,
+        unparsed,
+        already_done=len(done_rows),
+        workers=args.workers,
+        empty_limit=args.empty_limit,
     )
+    if guard.tripped:
+        print(f"[annotate] STOPPED: {guard.reason}", flush=True)
+        print("[annotate] partial results kept; re-run this stage to resume", flush=True)
+        return 1
     return 0
-
-
-def _call(model: str, image_path: Path, prompt: str):
-    """Annotate through the opencode CLI, returning text and token usage."""
-
-    result = subprocess.run(
-        [
-            "opencode",
-            "run",
-            "--model",
-            model,
-            "--file",
-            str(image_path),
-            "--format",
-            "json",
-            prompt,
-        ],
-        capture_output=True,
-        text=True,
-        timeout=900,
-    )
-    texts, tokens = [], None
-    for line in result.stdout.splitlines():
-        try:
-            event = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if event.get("type") == "text":
-            texts.append(event["part"]["text"])
-        elif event.get("type") == "step_finish":
-            tokens = event["part"].get("tokens")
-    return "\n".join(texts).strip(), tokens
 
 
 def cmd_manifest(args: argparse.Namespace) -> int:
     rows = read_jsonl(args.root / "conversations.jsonl")
     result = manifest(args.root / "conversations.jsonl")
-    for name, part in splits(rows, seed=args.seed).items():
+    for name, part in splits(usable_records(rows), seed=args.seed).items():
         write_jsonl(args.root / f"split_{name}.jsonl", part)
         result.setdefault("splits", {})[name] = len(part)
     (args.root / "manifest.json").write_text(json.dumps(result, indent=2))
@@ -225,6 +202,12 @@ def main() -> int:
     p.add_argument("--model", default=DEFAULT_ANNOTATOR)
     p.add_argument("--workers", type=int, default=1, help="concurrent opencode calls")
     p.add_argument("--limit", type=int, default=0, help="annotate at most N pending images")
+    p.add_argument(
+        "--empty-limit",
+        type=int,
+        default=10,
+        help="stop after this many consecutive responses with no token usage (DECISIONS 0044)",
+    )
     p.set_defaults(func=cmd_annotate)
 
     p = sub.add_parser("manifest")

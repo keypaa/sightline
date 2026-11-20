@@ -4,7 +4,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from sightline.m2a.manifest import manifest, splits
+from sightline.m2a.manifest import manifest, splits, usable_records
 
 TOKENS_PER_CONVERSATION = 3179
 
@@ -63,3 +63,24 @@ def _sha256(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1 << 20), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def test_manifest_does_not_count_unparsed_rows(tmp_path: Path) -> None:
+    path = tmp_path / "conversations.jsonl"
+    rows = [
+        {"id": 0, "source": "coco", "license_name": "CC BY 4.0", "parsed": True},
+        {"id": 1, "source": "coco", "license_name": "CC BY 4.0", "parsed": False},
+        {"id": 2, "source": "coco", "license_name": "CC BY 4.0", "parsed": True},
+    ]
+    path.write_text("\n".join(json.dumps(r) for r in rows) + "\n")
+
+    result = manifest(path)
+
+    assert result["n_conversations"] == 2
+    assert result["tokens_projected"] == 2 * TOKENS_PER_CONVERSATION
+
+
+def test_usable_records_drops_only_explicit_failure() -> None:
+    rows = [{"id": 0}, {"id": 1, "parsed": True}, {"id": 2, "parsed": False}]
+
+    assert [r["id"] for r in usable_records(rows)] == [0, 1]

@@ -32,6 +32,20 @@ def file_hash(path: Path) -> str:
     return digest.hexdigest()
 
 
+def pending_records(
+    fetched: list[dict[str, Any]], conversations: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Records still needing annotation on a resume.
+
+    Only parsed rows count as done. A rate-limited run writes blank rows with
+    ``parsed=False``; treating those as done would silently drop them from the
+    corpus and leave a hole instead of retrying them.
+    """
+
+    done = {row["id"] for row in conversations if row.get("parsed")}
+    return [row for row in fetched if row["id"] not in done]
+
+
 def annotate_one(model: str, image_path: Path, call: Transport) -> dict[str, Any]:
     """Annotate one image and return the conversation with its provenance."""
 

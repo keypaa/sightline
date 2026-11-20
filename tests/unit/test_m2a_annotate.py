@@ -4,7 +4,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from sightline.m2a.annotate import annotate_one
+from sightline.m2a.annotate import annotate_one, pending_records
 
 
 class StubTok:
@@ -66,3 +66,16 @@ def test_prompt_hash_is_stable(tmp_path: Path) -> None:
 
     assert first["prompt_sha256"] == second["prompt_sha256"]
     assert len(first["prompt_sha256"]) == 16
+
+
+def test_resume_retries_unparsed_rows() -> None:
+    """A rate-limited run left blank rows; they must not count as done."""
+
+    fetched = [{"id": i} for i in range(5)]
+    conversations = [
+        {"id": 0, "parsed": True},
+        {"id": 1, "parsed": False, "tokens_in": None},
+        {"id": 2, "parsed": True},
+    ]
+
+    assert [r["id"] for r in pending_records(fetched, conversations)] == [1, 3, 4]

@@ -42,6 +42,12 @@ def file_sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def usable_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Drop failed rows so they cannot enter a split or a token projection."""
+
+    return [row for row in records if row.get("parsed") is not False]
+
+
 def manifest(path: Path, tokens_per_conversation: int = TOKENS_PER_CONVERSATION) -> dict[str, Any]:
     """Describe a conversation file: size, provenance, and the token budget."""
 
@@ -54,17 +60,18 @@ def manifest(path: Path, tokens_per_conversation: int = TOKENS_PER_CONVERSATION)
 
     licences: dict[str, int] = {}
     sources: dict[str, int] = {}
-    for row in rows:
+    for row in usable_records(rows):
         name = row.get("license_name") or "missing"
         licences[name] = licences.get(name, 0) + 1
         source = row.get("source", "unknown")
         sources[source] = sources.get(source, 0) + 1
 
     return {
-        "n_conversations": len(rows),
+        "n_conversations": len(usable_records(rows)),
+        "n_unparsed": len(rows) - len(usable_records(rows)),
         "input_sha256": file_sha256(path),
         "licences": dict(sorted(licences.items())),
         "sources": dict(sorted(sources.items())),
         "tokens_per_conversation": tokens_per_conversation,
-        "tokens_projected": len(rows) * tokens_per_conversation,
+        "tokens_projected": len(usable_records(rows)) * tokens_per_conversation,
     }
