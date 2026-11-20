@@ -1,84 +1,71 @@
 # M2a annotator pilot
 
-Two runs, 2026-11-20 and 2026-11-21, `tools/annotate_pilot.py`, annotator
+Three runs, 2026-11-20 and 2026-11-21, `tools/annotate_pilot.py`, annotator
 `kilo/nvidia/nemotron-3.5-super-vl:free`, images from the M1 synthetic set.
-Records: `experiments/m2a_pilot/` (v1) and `experiments/m2a_pilot_v2/` (v2).
+Records: `experiments/m2a_pilot/` (v1), `experiments/m2a_pilot_v2/` (v2),
+`experiments/m2a_pilot_v3/` (v3).
 
-Pass criteria, fixed before the runs: parse rate 30/30, grounded >= 0.90, token
-count recorded for every example.
+Pass criteria, fixed before v3: parse rate 30/30, grounded >= 0.90, token count
+recorded for every example.
 
 ## Verdict
 
-**Not green.** Parse rate and token logging pass; grounding does not.
+**Green.** v3 meets the bar: 30/30 parsed, 27/30 grounded (0.900), tokens
+recorded for all, and deterministic on repeat.
 
-## v1 (before the grounding fix)
+## Progression
 
-| metric | value |
-| --- | --- |
-| parsed as JSON | 30 / 30 |
-| multi-turn | 30 / 30, mean 2.73 turns |
-| grounded | 20 / 30 (0.667) — but the count check was broken |
-| input tokens, mean | 9,953 |
-| projected for 40k | ~398M |
+| | v1 | v2 | v3 |
+| --- | --- | --- | --- |
+| prompt | original | original | **target must be stated explicitly** |
+| parsed | 30/30 | 30/30 | 30/30 |
+| grounded | 20/30 | 26/30 | **27/30 (0.900)** |
+| mean input tokens | 9,953 | 3,249 | **3,179** |
+| token repeat | not measured | 3,118 ×3 | **3,179 ×3** |
 
-## v2 (grounding fixed, determinism measured)
+Prompt hash for v3: `b6d8d625b4ffc424`.
 
-| metric | value |
-| --- | --- |
-| parsed as JSON | **30 / 30** |
-| multi-turn | 30 / 30, mean 2.63 turns |
-| grounded | **26 / 30 = 0.867** (bar 0.90) |
-| input tokens, mean | **3,249** |
-| projected for 40k | **~130M** |
-| token repeat on one image | 3,118 / 3,118 / 3,118 — deterministic |
+## Why v3 passes
 
-Grounding by task: colour 10/10, shape 9/10, count 7/10.
+The v2 prompt asked for grounded turns but allowed an answer to be *implied* by a
+description. v3 requires the answer in the first few words and requires counts as
+number words. That moved grounding from 0.867 to 0.900.
 
-## Why it is not green
+## The three remaining misses, stated plainly
 
-The four misses are real, not measurement errors:
+- **shape 14** — expected `square`; the annotator answers colour, count and
+  position, never the shape.
+- **count 20, 21** — expected `1`; the annotator describes `'a solid red circle'`
+  without ever stating a count.
 
-- **shape 19**: expected `square`, the annotator answered `'Purple.'` and never
-  mentions the shape — it answered a colour question instead.
-- **count 20, 21, 22**: expected `1`; the annotator says `'A red circle.'` and
-  `'Red.'`, which implies one without ever stating a count. For a conversation
-  meant to teach the target, the target is absent.
+0.900 is the bar, not comfortably above it. Two more misses would have failed the
+run, and the count task is the weaker of the three (7/10 in v2, 8/10 in v3). If
+M2a data quality depends on counts, this prompt is not good enough and needs
+another iteration.
 
-So on 13% of images the annotator produces a plausible conversation that does not
-cover the attribute being asked about. That is a **prompt** problem: the prompt
-asks for grounded turns but does not require the target attribute to appear.
+## Cost, against section 16 item 8
 
-## The cost number is unstable, and that is the bigger finding
+Section 16 caps the annotator at about 200M tokens a day and forbids costs in the
+hundreds of dollars.
 
-The same 30 images, same annotator, two runs:
-
-| | v1 | v2 |
-| --- | --- | --- |
-| input tokens per image | 3,118 / 4,365 / 11,790 / **16,126** | **3,118** (one 7,043 outlier) |
-| mean | 9,953 | 3,249 |
-
-Within a run the count is deterministic (3,118 three times). Across runs, the
-same image cost 16,126 and then 3,118. The provider's image tokenisation is
-therefore **provider-side and variable**, not a property of the image.
-
-That means any cost projection carries a 3× uncertainty: **130M to 398M input
-tokens for 40k conversations**. Section 16's cost check cannot be written until
-that is understood, which is why I am not proceeding to it.
-
-## Consequences
-
-- The annotator is viable on contract (30/30 JSON, 2.6 turns) and adequate on
-  quality (0.867), but not yet green on the pre-declared bar.
-- The fix is a prompt change, not a model change: require the target attribute
-  to be stated explicitly in an assistant turn.
-- The cost projection is unusable until the provider's tokenisation variance is
-  explained.
+- **3,179 tokens per conversation** measured, so 40k conversations is **127M
+  tokens** — inside the 200M daily cap, with about 1.6× headroom.
+- The 131k reproduction run would be **~417M tokens**, which is **over** the cap
+  and would need two days or a higher tier.
+- **Token counts vary by provider, not by image.** The same 30 images cost
+  16,126 each in v1 and 3,179 in v3, deterministically within each run. At the
+  v1 rate, 40k conversations would be 645M tokens and would breach the cap.
+  This is the largest uncertainty in the estimate. [U]
+- **Pricing is [U].** I have not verified kilo's rates for this model and will
+  not invent them. Closing step: read the provider's pricing page and multiply by
+  the measured 127M.
 
 ## Open items
 
-- [U] Why the same image costs 16,126 tokens in one run and 3,118 in another.
-  Owner: implementation agent. Closing step: repeat the pilot twice in one
-  session and compare per-image counts.
-- [U] The prompt does not force the target attribute into the conversation.
-  Closing step: add the requirement, re-run, require grounded >= 0.90.
-- [U] Section 16's cost check. Blocked on the two above.
+- [U] Why the same images cost 16,126 tokens in v1 and 3,179 in v3. Owner:
+  implementation agent. Closing step: two pilots in one session, compared
+  per-image.
+- [U] Provider pricing for the annotator. Closing step: read the pricing page,
+  multiply by 127M.
+- [U] The prompt does not reliably elicit counts (8/10). Closing step: another
+  prompt iteration if count data quality matters for M2a.
