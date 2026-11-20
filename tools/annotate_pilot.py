@@ -27,6 +27,34 @@ from pathlib import Path
 
 from sightline.data.m1_synthetic import generate_m1_dataset
 
+NUMBER_WORDS = {
+    1: "one",
+    2: "two",
+    3: "three",
+    4: "four",
+    5: "five",
+    6: "six",
+    7: "seven",
+    8: "eight",
+    9: "nine",
+    10: "ten",
+}
+
+
+def answer_forms(answer: str) -> list[str]:
+    """Acceptable spellings of an answer.
+
+    Count answers are digits in the dataset but words in conversation, so both
+    forms count as grounded. Checking only the digit scored every correct
+    `'Two.'` as a miss.
+    """
+
+    forms = [answer]
+    if answer.isdigit() and int(answer) in NUMBER_WORDS:
+        forms.append(NUMBER_WORDS[int(answer)])
+    return [f for f in forms if f]
+
+
 PROMPT = """Look at the attached image and write a short conversation about it.
 
 Rules:
@@ -158,6 +186,12 @@ def main() -> int:
         "--model", default="kilo/nvidia/nemotron-3.5-super-vl:free", help="annotator model"
     )
     parser.add_argument("--out", type=Path, default=Path("experiments/m2a_pilot"))
+    parser.add_argument(
+        "--repeat",
+        type=int,
+        default=0,
+        help="annotate the first image N times and report the token counts, to test determinism",
+    )
     args = parser.parse_args()
 
     dataset = generate_m1_dataset(seed=0)
@@ -174,6 +208,8 @@ def main() -> int:
     image_dir = Path(tempfile.mkdtemp(prefix="m2a_pilot_"))
     print(f"resuming: {len(records)} of {len(picked)} already done", flush=True)
 
+    import hashlib
+
     try:
         with path.open("a", encoding="utf-8") as handle:
             for i, example in enumerate(picked):
@@ -188,9 +224,15 @@ def main() -> int:
                     "index": i,
                     "task": example.task,
                     "expected": example.answer,
+                    "image_size": list(example.image.size),
+                    "image_sha256": hashlib.sha256(image_path.read_bytes()).hexdigest()[:16],
                     "parsed": messages is not None,
                     "turns": len(messages) // 2 if messages else 0,
-                    "grounded": any(example.answer in str(a).lower() for a in assistant),
+                    "grounded": any(
+                        form in str(a).lower()
+                        for a in assistant
+                        for form in answer_forms(example.answer)
+                    ),
                     "tokens_in": (tokens or {}).get("input"),
                     "tokens_out": (tokens or {}).get("output"),
                     "raw": raw[:400],
@@ -211,7 +253,17 @@ def main() -> int:
         (args.out / "summary.json").write_text(json.dumps(summary, indent=2))
         return 130
 
+    repeat_counts = []
+    if args.repeat > 1 and 0 in records:
+        repeat_image = image_dir / "000.png"
+        for _ in range(args.repeat):
+            _, tokens = call_model(args.model, repeat_image, PROMPT)
+            repeat_counts.append((tokens or {}).get("input"))
+
     summary = summarise([records[k] for k in sorted(records)], args.model)
+    if repeat_counts:
+        summary["token_repeat"] = repeat_counts
+        summary["token_repeat_deterministic"] = len(set(repeat_counts)) == 1
     (args.out / "summary.json").write_text(json.dumps(summary, indent=2))
     print(json.dumps(summary, indent=2))
     return 0
