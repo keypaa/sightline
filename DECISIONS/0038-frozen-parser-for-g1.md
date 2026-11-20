@@ -57,8 +57,9 @@ run.
 
 ## Open items
 
-- [U] How many shape answers the parser loses to trailing content. Owner:
-  implementation agent. Closing step: re-score all three seeds under a parser
-  that takes the first line, and report both scores.
+- [U] How many shape answers the parser loses to trailing content. **Answered**
+  (2026-11-20): 1.8 points on shape, 0.0 on colour and count, measured on seed 0
+  with the identical checkpoint on two cards. `reports/g1-parser-comparison.md`.
+  The parser is not adopted as the default; `exact` stands.
 - [U] Why magenta is at 0.078 when the other seven colours sit at 0.80-0.98.
   Owner: implementation agent. Closing step: a magenta-only probe.
