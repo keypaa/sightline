@@ -48,3 +48,4 @@ One short dated file per decision, named `NNNN-short-title.md` and based on `_te
 | 0040 | M2a annotator and its measured cost | M2a |
 | 0041 | Licence allow-list for M2a image sources | M2a |
 | 0042 | M2a split ratios (80/10/10, seeded) | M2a |
+| 0043 | Whether non-commercial images may enter the M2a corpus (pending) | M2a |
