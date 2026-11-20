@@ -40,13 +40,30 @@ CC BY 4.0; that covers the annotations. Three quarters of the photographs are
 non-commercial or no-derivatives. A pipeline that trusted the card would have
 ingested 118k images it had no right to use.
 
+## After DECISIONS 0043 (non-commercial allowed)
+
+With the policy changed to drop only no-derivatives and missing:
+
+| | count | share |
+| --- | --- | --- |
+| kept | **80,111** | **67.7%** |
+| dropped (all no-derivatives) | 38,176 | 32.3% |
+
+Drop breakdown: 5,992 `Attribution-NoDerivs` and **32,184
+`Attribution-NonCommercial-NoDerivs`**. The second group carries both restrictions,
+so it is excluded under either policy — this is why an early estimate of 112,295
+was wrong (see the correction in `DECISIONS/0043`).
+
+Survivors: NC-SA 32,878, CC BY 19,470, NC 16,397, BY-SA 10,901, no-known 465.
+
 ## Consequences for the source decision
 
-- COCO remains viable for the **iteration** stage, and it is still the best-behaved
-  source because the licence is recorded per image and the gate is automatable.
-- The **reproduction** stage needs a decision: multiple conversations per image,
-  or a second source. That decision belongs before M2a ends, not at G2.
-- `DECISIONS/0041` said the drop rate was open; this closes it at 73.9%.
+- COCO covers the 20k and 40k iteration targets, and 80,111 images against the
+  131k reproduction leaves it **1.64× short**.
+- The reproduction therefore needs either multiple conversations per image or a
+  second source. That decision belongs before M2a ends, not at G2.
+- `DECISIONS/0041` said the drop rate was open; it is now closed at 67.7% under
+  the signed policy in `DECISIONS/0043`.
 
 ## Evidence
 

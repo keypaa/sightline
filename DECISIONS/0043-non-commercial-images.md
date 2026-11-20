@@ -1,7 +1,7 @@
 # DECISION-0043: whether non-commercial images may enter the M2a corpus
 
 Date: 2026-11-19
-Status: **pending owner decision** — analysis complete, recommendation below
+Status: accepted
 Work package: M2a entry criteria
 
 ## Why this needs its own record
@@ -63,11 +63,47 @@ and no-known-restrictions (465).
 
 ### Supply against the plan
 
-| target | need | current | allow NC |
+| target | need | current (drop NC+ND) | allow NC, drop ND |
 | --- | --- | --- | --- |
-| M2a iteration, 20k | 20,000 | enough | enough |
+| M2a iteration, 20k | 20,000 | enough (30,836) | enough |
 | M2a iteration, 40k | 40,000 | short by 9,164 | enough |
-| G2 reproduction, 131k | 131,072 | short by 4.3× | short by ~19k |
+| G2 reproduction, 131k | 131,072 | short by 4.3× | short by ~51k (1.64×) |
+
+## Correction to the figures above
+
+The table above was written with **112,295** usable images for the allow-NC
+policy. That number was **wrong**, and the signed decision was made on it. The
+measured value is **80,111 (67.7%)**.
+
+The error: I computed the allow-NC case as "118,287 minus the 5,992 no-derivatives
+images", but the 5,992 was counted *after* non-commercial images had already been
+removed. The licence `Attribution-NonCommercial-NoDerivs License` carries **both**
+restrictions, and there are **32,184** of them. They are no-derivatives images and
+must be dropped under either policy.
+
+Corrected breakdown of the 38,176 drops (32.3% of the file):
+
+| licence | count |
+| --- | --- |
+| Attribution-NoDerivs License (ND only) | 5,992 |
+| Attribution-NonCommercial-NoDerivs License (NC **and** ND) | 32,184 |
+
+Survivors under allow-NC, with the measured counts:
+
+| licence | count |
+| --- | --- |
+| Attribution-NonCommercial-ShareAlike License | 32,878 |
+| Attribution License (CC BY 2.0) | 19,470 |
+| Attribution-NonCommercial License | 16,397 |
+| Attribution-ShareAlike License | 10,901 |
+| No known copyright restrictions | 465 |
+| **total** | **80,111** |
+
+The decision itself is unaffected — allowing NC still beats the conservative
+policy by 49,275 images (2.6×) — but the reproduction is **1.64× out of reach**,
+not 17% short. That changes how much a second source is needed, so it matters.
+
+`flickr_url` is present on all 80,111 kept records after re-running `index`. [V]
 
 ## Costs of allowing NC
 
@@ -115,14 +151,18 @@ automatable.
 
 ## Decision
 
-Pending. The owner records the choice here, and the gate is changed to match:
+**Option B: allow non-commercial images, drop no-derivatives and missing.**
 
 - [ ] **Option A** — drop NC and ND. Corpus 30,836 (26.1%). Supports the 20k
   iteration only. `DECISIONS/0041` stands unchanged.
-- [ ] **Option B** — allow NC, drop ND. Corpus 112,295 (94.9%). Supports the
-  40k iteration and nearly the reproduction. `DECISIONS/0041` is amended.
+- [x] **Option B** — allow NC, drop ND. Corpus **80,111 (67.7%)** after the
+  correction above. Supports the 40k iteration; the 131k reproduction is 1.64×
+  out of reach. `DECISIONS/0041` is amended.
 
-Signed: ______________________  Date: ____________
+Signed: Keylhan Paumard--André  Date: 2026-11-19
+
+Signed at the owner's instruction ("sign it please") on the recommendation above.
+The owner may amend this record; the gate follows it.
 
 ## Review trigger
 
