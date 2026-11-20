@@ -20,51 +20,12 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import subprocess
 import tempfile
 from pathlib import Path
 
 from sightline.data.m1_synthetic import generate_m1_dataset
-
-NUMBER_WORDS = {
-    1: "one",
-    2: "two",
-    3: "three",
-    4: "four",
-    5: "five",
-    6: "six",
-    7: "seven",
-    8: "eight",
-    9: "nine",
-    10: "ten",
-}
-
-
-def answer_forms(answer: str) -> list[str]:
-    """Acceptable spellings of an answer.
-
-    Count answers are digits in the dataset but words in conversation, so both
-    forms count as grounded. Checking only the digit scored every correct
-    `'Two.'` as a miss.
-    """
-
-    forms = [answer]
-    if answer.isdigit() and int(answer) in NUMBER_WORDS:
-        forms.append(NUMBER_WORDS[int(answer)])
-    return [f for f in forms if f]
-
-
-PROMPT = """Look at the attached image and write a short conversation about it.
-
-Rules:
-- 2 or 3 user turns.
-- Every user turn asks something that can be answered from the image alone.
-- Every assistant turn answers in a few words.
-- Do not mention that this is a test or an instruction.
-
-Reply with ONLY a JSON object, no prose and no code fence, in exactly this shape:
-{"messages": [{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}]}"""
+from sightline.m2a.prompt import PROMPT, answer_forms, parse_messages
 
 
 class RateLimited(RuntimeError):
@@ -119,26 +80,6 @@ def call_model(
         elif event.get("type") == "step_finish":
             tokens = event["part"].get("tokens")
     return "\n".join(texts).strip(), tokens
-
-
-def parse_messages(raw: str) -> list[dict] | None:
-    """Extract the JSON object, tolerating code fences and surrounding prose."""
-
-    text = raw.strip()
-    if text.startswith("```"):
-        text = re.sub(r"^```[a-zA-Z]*\n?", "", text)
-        text = re.sub(r"\n?```$", "", text).strip()
-    start, end = text.find("{"), text.rfind("}")
-    if start < 0 or end <= start:
-        return None
-    try:
-        payload = json.loads(text[start : end + 1])
-    except json.JSONDecodeError:
-        return None
-    messages = payload.get("messages")
-    if not isinstance(messages, list) or not messages:
-        return None
-    return [m for m in messages if isinstance(m, dict) and "content" in m]
 
 
 def load_done(path: Path) -> dict[int, dict]:
