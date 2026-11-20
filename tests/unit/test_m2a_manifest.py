@@ -1,0 +1,65 @@
+from __future__ import annotations
+
+import hashlib
+import json
+from pathlib import Path
+
+from sightline.m2a.manifest import manifest, splits
+
+TOKENS_PER_CONVERSATION = 3179
+
+
+def records(n: int) -> list[dict]:
+    return [
+        {"id": i, "source": "coco", "hash": i * 7, "license_name": "CC BY 4.0"} for i in range(n)
+    ]
+
+
+def test_splits_are_disjoint_and_complete() -> None:
+    parts = splits(records(300), seed=0)
+    flat = [r["id"] for part in parts.values() for r in part]
+
+    assert set(parts) == {"train", "val", "test"}
+    assert len(flat) == 300
+    assert len(set(flat)) == 300
+
+
+def test_split_assignment_is_reproducible() -> None:
+    assert splits(records(300), seed=0) == splits(records(300), seed=0)
+
+
+def test_a_different_seed_changes_the_assignment() -> None:
+    assert splits(records(300), seed=0) != splits(records(300), seed=1)
+
+
+def test_split_sizes_follow_the_documented_ratio() -> None:
+    parts = splits(records(3000), seed=0)
+
+    assert abs(len(parts["train"]) - 2400) <= 2
+    assert abs(len(parts["val"]) - 300) <= 2
+    assert abs(len(parts["test"]) - 300) <= 2
+
+
+def test_manifest_records_the_hash_and_the_budget(tmp_path: Path) -> None:
+    path = tmp_path / "conversations.jsonl"
+    rows = [
+        {"id": r["id"], "source": r["source"], "license_name": r["license_name"]}
+        for r in records(40)
+    ]
+    path.write_text("\n".join(json.dumps(r) for r in rows) + "\n")
+
+    result = manifest(path)
+
+    assert result["n_conversations"] == 40
+    assert result["input_sha256"] == _sha256(path)
+    assert result["tokens_projected"] == 40 * 3179
+    assert result["licences"] == {"CC BY 4.0": 40}
+    assert result["sources"] == {"coco": 40}
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for chunk in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()

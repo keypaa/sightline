@@ -47,3 +47,4 @@ One short dated file per decision, named `NNNN-short-title.md` and based on `_te
 | 0039 | G1 sign-off | M1c |
 | 0040 | M2a annotator and its measured cost | M2a |
 | 0041 | Licence allow-list for M2a image sources | M2a |
+| 0042 | M2a split ratios (80/10/10, seeded) | M2a |
