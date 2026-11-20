@@ -147,3 +147,54 @@ def test_load_g1_event_falls_back_for_records_without_a_split(tmp_path: Path) ->
     )
 
     assert load_g1_event(path, "test")["report"] == {"from": "later"}
+
+
+def test_report_prefers_the_requested_parser(tmp_path: Path) -> None:
+    from sightline.report_g1 import load_g1_event
+
+    path = tmp_path / "metrics.jsonl"
+    path.write_text(
+        "\n".join(
+            json.dumps(record)
+            for record in (
+                {
+                    "event": "g1",
+                    "seed": 0,
+                    "eval_split": "test",
+                    "parser": "exact",
+                    "report": {"from": "exact"},
+                },
+                {
+                    "event": "g1",
+                    "seed": 0,
+                    "eval_split": "test",
+                    "parser": "first-line",
+                    "report": {"from": "first-line"},
+                },
+            )
+        )
+        + "\n"
+    )
+
+    assert load_g1_event(path, "test", "exact")["report"] == {"from": "exact"}
+    assert load_g1_event(path, "test", "first-line")["report"] == {"from": "first-line"}
+
+
+def test_report_refuses_a_parser_that_was_never_run(tmp_path: Path) -> None:
+    from sightline.report_g1 import load_g1_event
+
+    path = tmp_path / "metrics.jsonl"
+    path.write_text(
+        json.dumps(
+            {
+                "event": "g1",
+                "seed": 0,
+                "eval_split": "test",
+                "parser": "exact",
+                "report": {"from": "exact"},
+            }
+        )
+        + "\n"
+    )
+
+    assert load_g1_event(path, "test", "first-line") is None

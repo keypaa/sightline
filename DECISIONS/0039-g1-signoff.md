@@ -59,9 +59,13 @@ packages.
 ## Open items
 
 - [U] The exact-match parser loses correct shape answers to trailing markdown
-  (`'diamond\n```json\n{\n  "'` with diamond at 0.998). Shape's 0.807 is a
-  floor. Owner: implementation agent. Closing step: re-score all three seeds
-  under a first-line parser and report both numbers.
+  (`'diamond\n```json\n{\n  "'` with diamond at 0.998). **Partly answered**
+  (2026-11-20): on seed 0 the first-line parser gains 1.8 points on shape and
+  nothing on colour or count, so shape's 0.807 is a slight floor rather than a
+  badly understated number. `reports/g1-parser-comparison.md`. Seeds 1 and 2 were
+  not re-scored: the effect is smaller than the cross-hardware noise measured
+  there, so the comparison would measure the card. The parser is not adopted as
+  the default; `exact` stands.
 - [U] Magenta sits at 0.078 / 0.469 / 0.219 while the other seven colours reach
   0.64-1.00. Owner: implementation agent. Closing step: a magenta-only probe.
 - [U] Count fails on an unseen question phrasing while scoring 0.969/0.797/0.617/

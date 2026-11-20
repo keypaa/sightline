@@ -23,38 +23,46 @@ TOOLS = {"probe_features", "profile_m1", "run_m1"}
 app = modal.App("sightline-tool")
 volume = modal.Volume.from_name("sightline-m1", create_if_missing=True)
 
-image = (
-    modal.Image.debian_slim(python_version="3.12")
-    .pip_install(
-        "torch==2.13.0",
-        "torchvision==0.28.0",
-        "transformers==5.12.1",
-        "tokenizers==0.22.2",
-        "safetensors==0.8.0",
-        "huggingface-hub==1.25.1",
-        "numpy==2.5.1",
-        "pillow==12.3.0",
-        "einops",
-        extra_index_url="https://download.pytorch.org/whl/cu130",
+
+def _build_image():
+    """Base image plus any checkpoints that exist locally.
+
+    The checkpoints are 302 MB each and gitignored, so requiring them would break
+    the other tools this wrapper runs (probe_features, profile_m1) on any clone
+    without them, and cost ~906 MB per image for nothing.
+    """
+
+    image = (
+        modal.Image.debian_slim(python_version="3.12")
+        .pip_install(
+            "torch==2.13.0",
+            "torchvision==0.28.0",
+            "transformers==5.12.1",
+            "tokenizers==0.22.2",
+            "safetensors==0.8.0",
+            "huggingface-hub==1.25.1",
+            "numpy==2.5.1",
+            "pillow==12.3.0",
+            "einops",
+            extra_index_url="https://download.pytorch.org/whl/cu130",
+        )
+        .add_local_dir("src", "/root/src")
+        .add_local_file("tools/run_m1.py", "/root/local_runner.py")
+        .add_local_file(
+            "artifacts/k3_vision_f831ab66.safetensors",
+            "/root/artifacts/k3_vision_f831ab66.safetensors",
+        )
     )
-    .add_local_dir("src", "/root/src")
-    .add_local_file(
-        "artifacts/k3_vision_f831ab66.safetensors",
-        "/root/artifacts/k3_vision_f831ab66.safetensors",
-    )
-    .add_local_file(
-        "artifacts/m1b/seed0/projector.pt",
-        "/root/artifacts/m1b/seed0/projector.pt",
-    )
-    .add_local_file(
-        "artifacts/m1b/seed1/projector.pt",
-        "/root/artifacts/m1b/seed1/projector.pt",
-    )
-    .add_local_file(
-        "artifacts/m1b/seed2/projector.pt",
-        "/root/artifacts/m1b/seed2/projector.pt",
-    )
-)
+    for seed in (0, 1, 2):
+        checkpoint = Path(f"artifacts/m1b/seed{seed}/projector.pt")
+        if checkpoint.exists():
+            image = image.add_local_file(
+                str(checkpoint), f"/root/artifacts/m1b/seed{seed}/projector.pt"
+            )
+    return image
+
+
+image = _build_image()
 
 
 @app.function(

@@ -31,6 +31,7 @@ import json
 import random
 import resource
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from statistics import median
@@ -139,7 +140,7 @@ def build_batches(examples, features, tok, device, micro_batch, spec: VisualSpec
     return [merge(singles[i : i + micro_batch]) for i in range(0, len(singles), micro_batch)]
 
 
-def answer_parser(name: str):
+def answer_parser(name: str) -> Callable[[str], str]:
     """Return the answer normaliser named by ``--parser``.
 
     ``exact`` is the frozen G1 rule and stays the default. ``first-line`` is the
@@ -205,12 +206,14 @@ def build_fixed_eval(tok, encoder, examples, device, spec: VisualSpec, n: int = 
     return examples, features, prompts
 
 
-def exact_match(model, tok, projector, examples, features, prompts, device) -> dict:
+def exact_match(model, tok, projector, examples, features, prompts, device, parser) -> dict:
     """Greedy exact match per task over a fixed subset."""
 
     hits: dict[str, list[bool]] = {}
     for i, example in enumerate(examples):
-        got = generate_answer(model, tok, projector, prompts[i], features[i : i + 1], device)
+        got = generate_answer(
+            model, tok, projector, prompts[i], features[i : i + 1], device, parser
+        )
         hits.setdefault(example.task, []).append(got == example.answer)
     return {task: round(sum(v) / len(v), 4) for task, v in hits.items()}
 
@@ -233,7 +236,7 @@ def build_prompt(tok, example, device, spec: VisualSpec):
 
 
 def debug_generations(
-    model, tok, encoder, projector, examples, device, n, spec: VisualSpec
+    model, tok, encoder, projector, examples, device, n, spec: VisualSpec, parser
 ) -> None:
     """Print what the model actually says, to tell a decode bug from a mapping bug.
 
@@ -246,14 +249,18 @@ def debug_generations(
     features = spec.prepare(torch.cat([encoder.encode([e.image]) for e in examples], dim=0))
     for i, example in enumerate(examples):
         prompt_ids = build_prompt(tok, example, device, spec)
-        answer = generate_answer(model, tok, projector, prompt_ids, features[i : i + 1], device)
+        answer = generate_answer(
+            model, tok, projector, prompt_ids, features[i : i + 1], device, parser
+        )
         print(
             f"[{example.task}] expected={example.answer!r} got={answer!r} "
             f"q={example.question[:70]!r}"
         )
 
 
-def debug_logits(model, tok, encoder, projector, examples, device, n, spec: VisualSpec) -> None:
+def debug_logits(
+    model, tok, encoder, projector, examples, device, n, spec: VisualSpec, parser
+) -> None:
     """Compare teacher-forced top-k with greedy decoding on the same examples.
 
     This separates two failures that look identical from the outside:
@@ -287,8 +294,10 @@ def debug_logits(model, tok, encoder, projector, examples, device, n, spec: Visu
             (tok.decode([int(token)]), round(float(p), 3))
             for token, p in zip(top.indices, top.values, strict=True)
         ]
-        greedy = generate_answer(model, tok, projector, prompt_ids, features[i : i + 1], device)
-        top_answer = str(top_tokens[0][0]).strip().lower().strip(" .!")
+        greedy = generate_answer(
+            model, tok, projector, prompt_ids, features[i : i + 1], device, parser
+        )
+        top_answer = parser(str(top_tokens[0][0]))
         teacher_forced += int(top_answer == example.answer)
         print(
             f"[{example.task}] expected={example.answer!r} "
@@ -554,6 +563,7 @@ def main() -> int:
         help="print teacher-forced top-5 against greedy decoding for N examples",
     )
     args = parser.parse_args()
+    answer_norm = answer_parser(args.parser)
 
     if not torch.cuda.is_available():
         raise SystemExit("no CUDA device")
@@ -646,11 +656,27 @@ def main() -> int:
         with contextlib.redirect_stdout(io.StringIO()):
             if args.debug_logits:
                 debug_logits(
-                    model, tok, encoder, trainer.projector, dataset.train[:1], "cuda", 1, spec
+                    model,
+                    tok,
+                    encoder,
+                    trainer.projector,
+                    dataset.train[:1],
+                    "cuda",
+                    1,
+                    spec,
+                    answer_norm,
                 )
             else:
                 debug_generations(
-                    model, tok, encoder, trainer.projector, dataset.train[:1], "cuda", 1, spec
+                    model,
+                    tok,
+                    encoder,
+                    trainer.projector,
+                    dataset.train[:1],
+                    "cuda",
+                    1,
+                    spec,
+                    answer_norm,
                 )
         print("diagnostic self-check ok", flush=True)
 
@@ -689,7 +715,7 @@ def main() -> int:
                 }
             )
         if fixed is not None and info["step"] % args.eval_every == 0:
-            accuracy = exact_match(model, tok, trainer.projector, *fixed, "cuda")
+            accuracy = exact_match(model, tok, trainer.projector, *fixed, "cuda", answer_norm)
             record.append_metric(
                 {
                     "event": "m1b_acc",
@@ -765,6 +791,12 @@ def main() -> int:
         trainer.save_checkpoint(checkpoint)
 
     split = sample_subset(list(getattr(dataset, args.eval_split)), args.eval_limit)
+    debugging = bool(args.debug_logits or args.debug_generations)
+    if args.filter_answer and not debugging:
+        raise SystemExit(
+            "--filter-answer only applies to --debug-logits/--debug-generations; "
+            "refusing to shrink a G1 evaluation"
+        )
     if args.filter_answer:
         split = filter_examples(split, args.filter_answer)
         if not split:
@@ -793,16 +825,33 @@ def main() -> int:
         return 0
 
     if args.debug_logits:
-        debug_logits(model, tok, encoder, trainer.projector, split, "cuda", args.debug_logits, spec)
+        debug_logits(
+            model,
+            tok,
+            encoder,
+            trainer.projector,
+            split,
+            "cuda",
+            args.debug_logits,
+            spec,
+            answer_norm,
+        )
         return 0
 
     if args.debug_generations:
         debug_generations(
-            model, tok, encoder, trainer.projector, split, "cuda", args.debug_generations, spec
+            model,
+            tok,
+            encoder,
+            trainer.projector,
+            split,
+            "cuda",
+            args.debug_generations,
+            spec,
+            answer_norm,
         )
         return 0
 
-    answer_norm = answer_parser(args.parser)
     eval_result = evaluate(model, tok, encoder, trainer.projector, split, "cuda", spec, answer_norm)
     usage = resource.getrusage(resource.RUSAGE_SELF)
     summary = {
@@ -827,6 +876,7 @@ def main() -> int:
         {
             "event": "m1b",
             "seed": args.seed,
+            "parser": args.parser,
             "max_steps": args.max_steps,
             "micro_batch": args.micro_batch,
             "final_loss": summary["final_loss"],
@@ -843,6 +893,7 @@ def main() -> int:
             "g1_pass": eval_result["g1_pass"],
             "eval_split": args.eval_split,
             "parser": args.parser,
+            "answer_breakdown": eval_result["answer_breakdown"],
             "report": eval_result["report"],
         }
     )

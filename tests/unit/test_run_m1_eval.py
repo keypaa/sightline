@@ -78,7 +78,9 @@ def test_exact_match_reports_every_task() -> None:
     ]
     features = torch.randn(2, 1, HIDDEN)
 
-    accuracy = runner.exact_match(model, StubTok(), projector, examples, features, prompts, "cpu")
+    accuracy = runner.exact_match(
+        model, StubTok(), projector, examples, features, prompts, "cpu", runner.normalise_answer
+    )
 
     assert accuracy == {"color": 1.0, "shape": 0.0}
 

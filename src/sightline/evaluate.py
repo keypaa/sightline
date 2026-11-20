@@ -76,17 +76,21 @@ def normalise_answer(text: str) -> str:
 
 
 def first_line_answer(text: str) -> str:
-    """Answer from the first line only, for models that keep talking.
+    """Answer from the first non-blank line, for models that keep talking.
 
     A reader that answers correctly and then emits markdown scores zero under
-    exact match. This keeps the first line and applies the same normalisation.
+    exact match. This skips leading blank lines — a generation prompt that ends
+    in a newline makes them common — and applies the same normalisation.
 
     It deliberately does not search for the target string anywhere in the
     output: `'not red'` contains `red` and must stay wrong. A lenient parser
     that finds substrings would score negated answers as correct.
     """
 
-    return normalise_answer(text.splitlines()[0] if text.splitlines() else text)
+    for line in text.splitlines():
+        if line.strip():
+            return normalise_answer(line)
+    return ""
 
 
 def mcnemar(a: torch.Tensor, b: torch.Tensor) -> dict:

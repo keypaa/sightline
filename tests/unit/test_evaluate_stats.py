@@ -39,6 +39,13 @@ def test_first_line_handles_an_empty_generation() -> None:
     assert first_line_answer("   \n\n") == ""
 
 
+def test_first_line_skips_leading_blank_lines() -> None:
+    from sightline.evaluate import first_line_answer
+
+    assert first_line_answer("\n\nred") == "red"
+    assert first_line_answer("  \n  red  \nmore") == "red"
+
+
 def test_control_below_chance_passes() -> None:
     lo, _ = wilson_interval(0, 500)
     assert lo <= CHANCE["color"]

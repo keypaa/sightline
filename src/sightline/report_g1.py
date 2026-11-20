@@ -21,14 +21,18 @@ from sightline.evaluate import g1_pass
 TASKS = ("color", "shape", "count")
 
 
-def load_g1_event(path: Path, split: str | None = None) -> dict[str, Any] | None:
-    """Return the last ``g1`` event in a metrics file, or None.
+def load_g1_event(
+    path: Path, split: str | None = None, parser: str | None = None
+) -> dict[str, Any] | None:
+    """Return the ``g1`` event matching the requested split and parser, or None.
 
-    A run directory can hold several evaluations — test, then val, then a re-run
-    — and taking the last one silently reports whichever split ran most
-    recently. When ``split`` is given, prefer the last event for that split, and
-    fall back to the last event overall only when no event records a split at
-    all, which is the case for records written before ``eval_split`` was logged.
+    A run directory accumulates one event per evaluation, so "the last one"
+    silently reports whichever evaluation ran most recently — a val run after a
+    test run, or a first-line re-score after the exact run that the G1 verdict
+    rests on. Both fields are therefore matched explicitly.
+
+    Events written before ``parser`` was logged have no such field; they are
+    used only when no event carries one at all.
     """
 
     if not path.exists():
@@ -44,19 +48,33 @@ def load_g1_event(path: Path, split: str | None = None) -> dict[str, Any] | None
                 events.append(record)
     if not events:
         return None
+
+    candidates = events
     if split is not None:
-        for record in reversed(events):
-            if record.get("eval_split") == split:
-                return record
-        if any("eval_split" in record for record in events):
+        matching = [r for r in candidates if r.get("eval_split") == split]
+        if not any("eval_split" in r for r in candidates):
+            pass  # legacy records carry no split; fall through to the last one
+        elif not matching:
             return None
-    return events[-1]
+        else:
+            candidates = matching
+    if parser is not None:
+        matching = [r for r in candidates if r.get("parser") == parser]
+        if not any("parser" in r for r in candidates):
+            pass  # legacy records carry no parser
+        elif not matching:
+            return None
+        else:
+            candidates = matching
+    return candidates[-1]
 
 
-def load_seed(root: Path, seed: int, split: str | None = None) -> dict[str, Any] | None:
+def load_seed(
+    root: Path, seed: int, split: str | None = None, parser: str | None = None
+) -> dict[str, Any] | None:
     """Read a seed's ``g1`` event from ``<root>/seed<seed>/metrics.jsonl``."""
 
-    return load_g1_event(root / f"seed{seed}" / "metrics.jsonl", split)
+    return load_g1_event(root / f"seed{seed}" / "metrics.jsonl", split, parser)
 
 
 def summarise(events: dict[int, dict[str, Any] | None], seeds: Sequence[int]) -> dict[str, Any]:
@@ -108,7 +126,10 @@ def summarise(events: dict[int, dict[str, Any] | None], seeds: Sequence[int]) ->
 
 
 def render_markdown(
-    summary: dict[str, Any], sources: dict[int, Path], split: str | None = None
+    summary: dict[str, Any],
+    sources: dict[int, Path],
+    split: str | None = None,
+    parser: str | None = None,
 ) -> str:
     lines = [
         "# G1 report: M1b trained projector on held-out M1 data",
@@ -116,6 +137,8 @@ def render_markdown(
         f"Generated: {datetime.now(UTC).strftime('%Y-%m-%d %H:%M UTC')}",
         "",
         f"Evaluation split: **{split}**" if split else "Evaluation split: last recorded",
+        "",
+        f"Answer parser: **{parser}**" if parser else "Answer parser: last recorded",
         "",
         "",
         "Thresholds are frozen in `DECISIONS/0032` and implemented in",
@@ -178,11 +201,11 @@ def render_markdown(
 
 
 def build_report(
-    root: Path, seeds: Sequence[int], split: str | None = None
+    root: Path, seeds: Sequence[int], split: str | None = None, parser: str | None = None
 ) -> tuple[str, dict[int, Path]]:
-    events = {seed: load_seed(root, seed, split) for seed in seeds}
+    events = {seed: load_seed(root, seed, split, parser) for seed in seeds}
     summary = summarise(events, seeds)
     sources = {
         seed: root / f"seed{seed}" / "metrics.jsonl" for seed in seeds if events[seed] is not None
     }
-    return render_markdown(summary, sources, split), summary
+    return render_markdown(summary, sources, split, parser), summary

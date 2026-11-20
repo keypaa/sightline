@@ -69,12 +69,13 @@ expect, and switches to prose when the phrasing changes.
 **Magenta is a specific weak spot.** 0.078 on test against 0.80–0.98 for the
 other seven colours. Whatever the model does with magenta, it is not learning it.
 
-**The parser loses some correct answers.** One shape example produced
+**The parser loses a little.** One shape example produced
 `'diamond\n```json\n{\n  "'` with `diamond` at 0.998, scored wrong because the
-parser strips only whitespace and ` .!`. So shape's 0.807 is an underestimate.
-This was not fixed before the runs: changing a frozen scoring rule after seeing a
-failing result would make seed 0 incomparable with seeds 1 and 2. See
-DECISIONS 0038.
+parser strips only whitespace and ` .!`. Measured on seed 0, a first-line parser
+gains 1.8 points on shape and nothing on colour or count, so 0.807 is a mild
+floor rather than a badly understated number. The parser was not adopted as the
+default: changing a frozen scoring rule after a run would need its own decision.
+See `reports/g1-parser-comparison.md` and DECISIONS 0038.
 
 ## G1
 
@@ -88,9 +89,9 @@ information.
 
 ## Open items
 
-- [U] How many shape answers the parser loses to trailing content. Closing step:
-  re-score all three seeds under a first-line parser and report both.
-- [U] Why magenta sits at 0.078 while other colours sit at 0.80–0.98. Closing
-  step: a magenta-only probe.
+- Answered: the parser costs 1.8 points on shape, 0.0 on colour and count
+  (`reports/g1-parser-comparison.md`). Not adopted as the default.
+- Answered: magenta is learned (12/12 on train) but 1/12 on test, and the
+  errors are not explained by RGB distance (`reports/m1b-magenta.md`).
 - [U] Whether count generalises with a consistent question template across
   splits. Closing step: a run with one count template everywhere.

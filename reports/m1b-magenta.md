@@ -30,13 +30,29 @@ Confidence on the wrong answers is often high — `'blue'` at 0.901 and 0.762,
 ## Reading it
 
 Magenta is not an unlearned class. The model answers it perfectly on training
-images and confidently wrong on unseen ones, and the wrong answers are
-concentrated on **blue, cyan and green** — the colours nearest magenta in RGB
-space. So the magenta region the projector learns is narrow: it covers the
-training images and collapses onto its neighbours on anything new.
+images and confidently wrong on unseen ones.
 
-That is a generalisation failure with a direction, not random noise, and it
-explains the per-class number without needing a capacity story.
+**The wrong answers are not explained by colour distance.** I first wrote that
+blue, cyan and green are magenta's neighbours in RGB; that is false. Measured
+from the palette in `src/sightline/data/synthetic.py`:
+
+| colour | RGB | distance from magenta |
+| --- | --- | --- |
+| purple | (128, 0, 128) | **180** |
+| red | (255, 0, 0) | 255 |
+| blue | (0, 0, 255) | 255 |
+| orange | (255, 165, 0) | 304 |
+| yellow | (255, 255, 0) | 361 |
+| cyan | (0, 255, 255) | 361 |
+| green | (0, 255, 0) | **442** |
+
+The nearest colour, purple, is answered correctly at 0.891. The farthest,
+green, is among the wrong answers. Blue and cyan are mid-distance, and red —
+tied nearest with blue — never appears. So the errors are not a neighbourhood
+effect, and no distance-based story fits the data. [V]
+
+What the errors do show is that the model leaves the magenta region entirely
+rather than landing just outside it. **Why it does that is [U].**
 
 The `'diamond'`, `'human'` and `'to'` answers are a separate matter: on a colour
 question the model occasionally emits a shape word or a chat token. That is the

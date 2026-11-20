@@ -41,15 +41,18 @@ change any verdict.
   smaller than the cross-hardware noise, so the comparison would be measuring
   the card, not the parser. If it is worth doing, it is worth doing on the
   PRO 6000.
-- Recorded for future calibration: **bf16 evaluation on n=512 varies by up to
-  0.8 points between sm_86 and sm_120.** Comparisons of small deltas must be
-  run on one card.
+- Recorded for future calibration, as **[I]** from a single unreplicated
+  comparison: bf16 evaluation at n=512 moved by up to 0.8 points between sm_86
+  and sm_120. Treat it as an order-of-magnitude warning, not a constant:
+  **do not compare small accuracy deltas across cards.**
 
 ## Evidence
 
 - Seed 0 checkpoint sha256 `99cc1cd7…`, identical file on both machines. [V]
 - A10G run: `modal/eval_recheck.py --seeds 0 --parsers exact,first-line`, exit 0. [V]
 - Signed run: `reports/g1.md`, RTX PRO 6000. [V]
+- The sm_86/sm_120 attribution and the size of the noise floor are inference from
+  one comparison, not a controlled measurement. [I]
 
 ## Open items
 

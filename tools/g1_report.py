@@ -20,13 +20,18 @@ def main() -> int:
     parser.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2])
     parser.add_argument("--out", type=Path, default=Path("reports/g1.md"))
     parser.add_argument(
+        "--parser",
+        default="exact",
+        help="which answer parser's events to report; exact is the frozen G1 rule",
+    )
+    parser.add_argument(
         "--split",
         default="test",
         help="which evaluation split to report; a seed without one is marked missing",
     )
     args = parser.parse_args()
 
-    markdown, summary = build_report(args.root, args.seeds, args.split)
+    markdown, summary = build_report(args.root, args.seeds, args.split, args.parser)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(markdown, encoding="utf-8")
     print(markdown)
