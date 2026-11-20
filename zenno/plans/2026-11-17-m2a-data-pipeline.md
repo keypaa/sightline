@@ -311,6 +311,46 @@ git commit -m "M2a: manifest, disjoint splits, and the run record for the build"
 
 ---
 
+## Deviations from the plan
+
+Recorded as they happened, so a later reader can see what was built differs from
+what was written and why.
+
+### Task 2 — the allow-list narrows, it never widens
+
+- **Planned:** an explicit allow-list acts as an override, tested by admitting a
+  `CC BY-NC 2.0` record.
+- **Built:** the NC/ND checks run first and cannot be bypassed. An allow-list can
+  only narrow further; an empty allow-list admits nothing.
+- **Why:** the planned behaviour would let any caller re-admit a non-commercial
+  image by passing a permissive list, which defeats the point of the gate. My
+  first two tests asserted the unsafe behaviour; they were wrong, not the code.
+- **Cost if wrong:** a caller who genuinely needs a non-commercial image for a
+  research-only arm cannot get it through this function. That is the intended
+  behaviour, and such a source should be a separate decision.
+
+### Task 2 — reasons are reported, not just counted
+
+- **Planned:** dropped records carry a `drop_reason`.
+- **Built:** as planned, plus `not-in-allow-list` for records that pass the
+  policy but are excluded by a narrowing list. Without it, a narrowing
+  allow-list would silently shrink the corpus with no explanation.
+- **Cost if wrong:** none; the reason string is additive.
+
+### Task 1 — unknown licence ids stay visible
+
+- **Planned:** records carry the licence fields; filtering is Task 2.
+- **Built:** as planned. An id present in the image record but absent from the
+  licence table yields `license_name=None` and the record is still returned, so
+  the caller counts it rather than losing it.
+- **Cost if wrong:** none; the gate treats it as `missing-licence`.
+
+### Tests added beyond the plan's examples
+
+- `test_unknown_licence_id_is_reported_not_dropped`, `test_names_are_matched_case_insensitively`,
+  `test_an_empty_allow_list_admits_nothing`. All additive; each covers a case the
+  plan's Review Focus named but its examples did not exercise.
+
 ## Notes for the executor
 
 - The 20k iteration set is the target, not 131k: at 3,179 tokens each, 20k is ~64M and 131k is ~417M, over the 200M/day cap (`DECISIONS/0040`).
