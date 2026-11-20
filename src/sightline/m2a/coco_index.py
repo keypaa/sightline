@@ -35,6 +35,10 @@ def read_annotations(path: Path) -> tuple[list[dict[str, Any]], dict[int, dict[s
                 "license_id": int(licence_id) if licence_id is not None else None,
                 "license_name": entry["name"] if entry else None,
                 "license_url": entry.get("url") if entry else None,
+                # s.4(a) requires crediting the original author; COCO records no
+                # author name, so the Flickr URL is the attribution route.
+                "flickr_url": image.get("flickr_url"),
+                "coco_url": image.get("coco_url"),
             }
         )
     return records, table

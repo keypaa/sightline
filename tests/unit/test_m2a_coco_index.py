@@ -25,6 +25,21 @@ def test_records_carry_the_licence_id(tmp_path: Path) -> None:
     assert table[3]["url"] == "u"
 
 
+def test_attribution_fields_are_kept(tmp_path: Path) -> None:
+    """s.4(a) requires crediting the author; COCO records no name, only a URL."""
+
+    path = write_annotations(
+        tmp_path / "instances.json",
+        [{"id": 1, "file_name": "a.jpg", "license": 3, "flickr_url": "http://f/p1", "coco_url": "http://c/p1"}],
+        [{"id": 3, "name": "CC BY 4.0", "url": "u"}],
+    )
+
+    records, _ = read_annotations(path)
+
+    assert records[0]["flickr_url"] == "http://f/p1"
+    assert records[0]["coco_url"] == "http://c/p1"
+
+
 def test_a_missing_licence_id_becomes_none(tmp_path: Path) -> None:
     path = write_annotations(
         tmp_path / "instances.json",
