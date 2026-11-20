@@ -27,10 +27,15 @@ def _normalise(name: str | None) -> str:
 def drop_reason(name: str | None) -> str | None:
     """Why this licence is unusable, or None when it passes the policy.
 
-    COCO's own names are the test: ``Attribution-NonCommercial License``,
-    ``Attribution-NonCommercial-NoDerivs License``, ``Attribution-NoDerivs
-    License``. Matching only a bare ``nc`` or ``nd`` token misses all of them,
-    because the words embed the letters.
+    Policy (DECISIONS 0043): **non-commercial is allowed, no-derivatives is
+    not**. NC only restricts exercising the rights in a manner primarily directed
+    at commercial advantage, which research is not. ND removes the
+    derivative-works grant that CC BY-NC 2.0 s.3 otherwise gives, and training
+    pipelines resize and crop.
+
+    COCO's own names are the test: ``Attribution-NonCommercial-NoDerivs
+    License`` must be caught by the ND rule even though it also says
+    NonCommercial.
     """
 
     if not name:
@@ -38,8 +43,6 @@ def drop_reason(name: str | None) -> str | None:
     squashed = re.sub(r"[^a-z0-9]+", " ", name.lower()).strip()
     compact = squashed.replace(" ", "")
     tokens = set(squashed.split())
-    if "noncommercial" in compact or "nc" in tokens:
-        return "non-commercial"
     if "noderivs" in compact or "noderivatives" in compact or "nd" in tokens:
         return "no-derivatives"
     return None

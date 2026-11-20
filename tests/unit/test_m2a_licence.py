@@ -3,7 +3,9 @@ from __future__ import annotations
 from sightline.m2a.licence import classify
 
 
-def test_policy_drops_nc_nd_and_missing() -> None:
+def test_policy_allows_nc_and_drops_nd_and_missing() -> None:
+    """DECISIONS 0043: non-commercial is allowed, no-derivatives is not."""
+
     records = [
         {"file_name": "a.jpg", "license_name": "CC BY 4.0"},
         {"file_name": "b.jpg", "license_name": "CC BY-NC 2.0"},
@@ -13,12 +15,9 @@ def test_policy_drops_nc_nd_and_missing() -> None:
 
     kept, dropped = classify(records)
 
-    assert [r["file_name"] for r in kept] == ["a.jpg"]
-    assert {r["drop_reason"] for r in dropped} == {
-        "non-commercial",
-        "no-derivatives",
-        "missing-licence",
-    }
+    assert [r["file_name"] for r in kept] == ["a.jpg", "b.jpg"]
+    assert [r["file_name"] for r in dropped] == ["c.jpg", "d.jpg"]
+    assert {r["drop_reason"] for r in dropped} == {"no-derivatives", "missing-licence"}
 
 
 def test_an_explicit_allow_list_narrows_further() -> None:
@@ -40,10 +39,9 @@ def test_the_policy_cannot_be_bypassed_by_an_allow_list() -> None:
 
     records = [{"file_name": "a.jpg", "license_name": "CC BY-NC 2.0"}]
 
-    kept, dropped = classify(records, allow={"cc by-nc 2.0"})
+    kept, _ = classify(records, allow={"cc by 4.0"})
 
     assert kept == []
-    assert dropped[0]["drop_reason"] == "non-commercial"
 
 
 def test_an_empty_allow_list_admits_nothing() -> None:
@@ -60,12 +58,15 @@ def test_names_are_matched_case_insensitively() -> None:
         {"file_name": "a.jpg", "license_name": "cc by 4.0"},
         {"file_name": "b.jpg", "license_name": "CC-BY 4.0"},
         {"file_name": "c.jpg", "license_name": "CC BY-NC-SA 2.0"},
+        {"file_name": "d.jpg", "license_name": "CC BY-NC-ND 2.0"},
     ]
 
     kept, dropped = classify(records)
 
-    assert len(kept) == 2
-    assert dropped[0]["drop_reason"] == "non-commercial"
+    # "CC BY-NC-SA 2.0" is non-commercial, which is allowed; the ND one is not
+    assert [r["file_name"] for r in kept] == ["a.jpg", "b.jpg", "c.jpg"]
+    assert [r["file_name"] for r in dropped] == ["d.jpg"]
+    assert dropped[0]["drop_reason"] == "no-derivatives"
 
 
 def test_the_real_coco_licence_names_are_handled() -> None:
@@ -84,9 +85,9 @@ def test_the_real_coco_licence_names_are_handled() -> None:
 
     kept, dropped = classify(records)
 
-    assert {r["file_name"] for r in kept} == {"4.jpg", "5.jpg", "7.jpg", "8.jpg"}
+    # NC names are allowed under DECISIONS 0043; ND and missing are not
+    assert {r["file_name"] for r in kept} == {"1.jpg", "2.jpg", "4.jpg", "5.jpg", "7.jpg", "8.jpg"}
     reasons = {r["file_name"]: r["drop_reason"] for r in dropped}
-    assert reasons["1.jpg"] == "non-commercial"
-    assert reasons["2.jpg"] == "non-commercial"
-    assert reasons["3.jpg"] == "non-commercial"
+    assert reasons["3.jpg"] == "no-derivatives"
     assert reasons["6.jpg"] == "no-derivatives"
+    assert set(reasons) == {"3.jpg", "6.jpg"}
