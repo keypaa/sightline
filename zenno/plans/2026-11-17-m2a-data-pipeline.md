@@ -6,40 +6,41 @@
 
 **Architecture:** A small set of pure functions, each stage reading the previous stage's JSONL and writing its own. Nothing is held in memory across stages, so any stage can be re-run alone and a crash costs one stage. Images are fetched once into a content-addressed cache and never re-fetched.
 
-**Tech Stack:** Python 3.13, `requests` for COCO range reads, `Pillow` for hashing, `transformers` not needed, `opencode run` as the annotator transport.
+**Tech Stack:** Python 3.13, `requests` for COCO range reads, `Pillow` for hashing, `opencode run` as the annotator transport.
 
-**Spec:** `reports/m2a-entry-criteria.md` (items 6, 7, 8), `DECISIONS/0035-projector-output-scale.md` for style, `DECISIONS/0040-m2a-annotator.md` for the annotator contract, `docs/measurement-pitfalls.md` for the ordered-split and sampling traps.
+**Spec:** `reports/m2a-entry-criteria.md` (items 6, 7, 8), `DECISIONS/0040-m2a-annotator.md` for the annotator contract, `DECISIONS/0041-licence-allow-list.md` for the licence policy, `docs/measurement-pitfalls.md` for the ordered-split and sampling traps.
 
 ## Global Constraints
 
 - No source enters without a recorded licence. A record with no licence id is dropped, not defaulted.
 - The annotator is `kilo/nvidia/nemotron-3.5-super-vl:free`, prompt hash `b6d8d625b4ffc424`, recorded per conversation. One annotator for both arms of M2b, never switched.
-- Measured annotator cost is 3,179 input tokens per conversation; 20k conversations is ~64M tokens, inside the 200M/day cap.
+- Measured annotator cost is 3,179 input tokens per conversation; 20k conversations is ~64M tokens, inside the 200M/day cap (`DECISIONS/0040`).
 - Every stage writes JSONL and is resumable: re-running skips records already written, keyed by a stable id.
+- Every build writes a `RunRecord` (project rule 8). A data build without a run record does not exist.
 - Splits are sharded by source and by perceptual hash, never by taking the first N of an ordered file (`docs/measurement-pitfalls.md`).
-- MMMU-Pro and BLINK images are excluded. Neither enters training.
+- MMMU-Pro and BLINK are separate datasets and are simply not used. Since the only source is COCO, no image-level exclusion list is needed; this is recorded so the constraint is not re-opened later.
 - No emojis. Type hints. Comments explain intent.
 
 ## Review Focus
 
-- **An image whose licence id is absent from the annotations.** Expected: dropped, counted, and reported — never assumed permissive.
-- **A licence id whose name is not in the allow-list** (NC or ND variants). Expected: dropped with the reason recorded.
-- **The same image reachable at two COCO ids** (duplicates exist in the wild). Expected: one survives, chosen deterministically, and the duplicate is counted.
-- **An annotator call that returns prose instead of JSON.** Expected: the record is marked unparsed and the run continues; the failure rate is reported, not hidden.
-- **A resharded corpus.** Expected: the same seed and the same inputs give the same split assignment, and no image appears in two splits.
+- **An image whose licence id is absent from the annotations.** Expected: dropped with reason `missing-licence`, counted, never assumed permissive.
+- **A licence whose name carries NC or ND.** Expected: dropped with the reason recorded, even if a fixed allow-list would have admitted it.
+- **The same image at two COCO ids.** Expected: one survives, chosen deterministically, duplicate counted — and the test must exercise the hash, not just the file name.
+- **An annotator call returning prose instead of JSON.** Expected: record marked `parsed: false`, run continues, failure rate reported.
+- **A re-run of the build.** Expected: byte-identical manifest and identical split assignment.
 
 ---
 
 ### Task 1: COCO index reader with licence capture
 
 **Files:**
-- Create: `src/sightline/m2a/coco_index.py`
 - Create: `src/sightline/m2a/__init__.py`
+- Create: `src/sightline/m2a/coco_index.py`
 - Test: `tests/unit/test_m2a_coco_index.py`
 
 **Interfaces:**
 - Consumes: a COCO `instances_train2017.json` path.
-- Produces: `read_annotations(path) -> tuple[list[dict], dict[int, dict]]` returning per-image records `{"file_name", "id", "license_id", "license_name", "license_url"}` and the licence table; `iter_licence_ids(records) -> set[int]`.
+- Produces: `read_annotations(path: Path) -> tuple[list[dict], dict[int, dict]]` — per-image records `{"file_name", "id", "license_id", "license_name", "license_url"}` and the licence table keyed by id.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -64,7 +65,7 @@ Expected: FAIL, `ModuleNotFoundError`
 
 - [ ] **Step 3: Implement the reader in `src/sightline/m2a/coco_index.py`**
 
-Read the JSON, index `licenses` by id, and emit one record per image with the licence fields joined. Do not filter here — filtering is Task 2, so the raw counts stay visible.
+Index `licenses` by id, join onto each image, and emit one record per image. Do not filter here — filtering is Task 2, so the raw counts stay visible.
 
 - [ ] **Step 4: Run the tests and verify they pass**
 
@@ -74,11 +75,11 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/sightline/m2a tools tests
+git add src/sightline/m2a tests
 git commit -m "M2a: read COCO annotations with their per-image licence ids"
 ```
 
-### Task 2: Licence gate as a recorded decision
+### Task 2: Licence gate
 
 **Files:**
 - Create: `src/sightline/m2a/licence.py`
@@ -86,13 +87,13 @@ git commit -m "M2a: read COCO annotations with their per-image licence ids"
 - Test: `tests/unit/test_m2a_licence.py`
 
 **Interfaces:**
-- Consumes: `read_annotations` output from Task 1.
-- Produces: `classify(records, allow: set[str]) -> tuple[list[dict], list[dict]]` returning kept and dropped records, each dropped record carrying a `drop_reason`.
+- Consumes: records from Task 1.
+- Produces: `classify(records: list[dict], allow: set[str] | None = None) -> tuple[list[dict], list[dict]]`. When `allow` is `None`, the production policy applies: drop anything whose name carries `nc` or `nd`, and drop a missing name. Dropped records carry `drop_reason` in `{"non-commercial", "no-derivatives", "missing-licence"}`.
 
 - [ ] **Step 1: Write the failing tests**
 
 ```python
-def test_non_commercial_and_no_derivative_are_dropped():
+def test_policy_drops_nc_nd_and_missing():
     records = [
         {"file_name": "a.jpg", "license_name": "CC BY 4.0"},
         {"file_name": "b.jpg", "license_name": "CC BY-NC 2.0"},
@@ -100,10 +101,18 @@ def test_non_commercial_and_no_derivative_are_dropped():
         {"file_name": "d.jpg", "license_name": None},
     ]
 
-    kept, dropped = classify(records, allow={"cc by 4.0", "cc by 2.0", "cc0"})
+    kept, dropped = classify(records)
 
     assert [r["file_name"] for r in kept] == ["a.jpg"]
     assert {r["drop_reason"] for r in dropped} == {"non-commercial", "no-derivatives", "missing-licence"}
+
+
+def test_an_explicit_allow_list_overrides_the_policy():
+    records = [{"file_name": "a.jpg", "license_name": "CC BY-NC 2.0"}]
+
+    kept, dropped = classify(records, allow={"cc by-nc 2.0"})
+
+    assert len(kept) == 1 and dropped == []
 ```
 
 - [ ] **Step 2: Run it and verify it fails**
@@ -113,11 +122,11 @@ Expected: FAIL, `ModuleNotFoundError`
 
 - [ ] **Step 3: Write `DECISIONS/0041-licence-allow-list.md`**
 
-State the allow-list as **any licence without NC or ND**, and require the licence *name* to be recorded from the annotations file rather than assumed. Record the reason: COCO's images are per-image Flickr licences and the consortium does not own them.
+Record the policy as **drop NC and ND, drop missing**, with licence names read from the annotations file rather than assumed. Record why: COCO's images are per-image Flickr licences and the consortium does not own them, so the dataset-level "CC BY 4.0" is not permission for the pixels.
 
 - [ ] **Step 4: Implement `classify` in `src/sightline/m2a/licence.py`**
 
-Match on the normalised licence name, case-folded. A missing name is `missing-licence`. Return counts as part of the caller's report.
+Normalise the name (case-fold, collapse separators). Check `nc` and `nd` as tokens before consulting any allow-list, so the policy cannot be bypassed by a caller.
 
 - [ ] **Step 5: Run the tests and verify they pass**
 
@@ -131,27 +140,37 @@ git add src/sightline/m2a/licence.py tests DECISIONS
 git commit -m "M2a: drop images without a permissive recorded licence"
 ```
 
-### Task 3: Content-addressed image cache and duplicate detection
+### Task 3: Image cache and duplicate detection
 
 **Files:**
 - Create: `src/sightline/m2a/images.py`
 - Test: `tests/unit/test_m2a_images.py`
 
 **Interfaces:**
-- Consumes: kept records from Task 2, a download callable.
-- Produces: `fetch(record, cache_dir, get) -> Path` returning the local path; `perceptual_hash(path) -> int`; `dedupe(records, hashes) -> tuple[list, list]`.
+- Consumes: kept records from Task 2, a `get(url) -> bytes` callable.
+- Produces: `fetch(record: dict, cache_dir: Path, get) -> Path`; `dhash(path: Path) -> int`; `dedupe(records: list[dict], hashes: dict[int, int]) -> tuple[list[dict], list[dict]]` keyed by image id.
 
 - [ ] **Step 1: Write the failing tests**
 
 ```python
-def test_same_image_at_two_ids_keeps_one(tmp_path):
-    records = [{"file_name": "a.jpg", "id": 1}, {"file_name": "a.jpg", "id": 2}]
-    hashes = {"a.jpg": 12345, }
+def test_identical_images_at_two_ids_keeps_one(tmp_path):
+    a = tmp_path / "a.png"
+    b = tmp_path / "b.png"
+    _write_solid(a, (10, 10), (255, 0, 0))
+    _write_solid(b, (10, 10), (255, 0, 0))
+    c = tmp_path / "c.png"
+    _write_solid(c, (10, 10), (0, 0, 255))
+
+    records = [{"id": 1}, {"id": 2}, {"id": 3}]
+    hashes = {1: dhash(a), 2: dhash(b), 3: dhash(c)}
+
+    assert dhash(a) == dhash(b)
+    assert dhash(a) != dhash(c)
 
     kept, dupes = dedupe(records, hashes)
 
-    assert len(kept) == 1
-    assert len(dupes) == 1
+    assert {r["id"] for r in kept} == {1, 3}
+    assert [r["id"] for r in dupes] == [2]
 ```
 
 - [ ] **Step 2: Run it and verify it fails**
@@ -159,9 +178,9 @@ def test_same_image_at_two_ids_keeps_one(tmp_path):
 Run: `python3 -m pytest tests/unit/test_m2a_images.py -q`
 Expected: FAIL, `ModuleNotFoundError`
 
-- [ ] **Step 3: Implement the cache and hash in `src/sightline/m2a/images.py`**
+- [ ] **Step 3: Implement the cache, dHash and dedupe in `src/sightline/m2a/images.py`**
 
-The cache key is the file name, which is stable in COCO. The perceptual hash is a 64-bit dHash via Pillow, implemented locally — no new dependency.
+`dhash` is a 64-bit difference hash via Pillow, implemented locally — no new dependency. `dedupe` walks records in order and keeps the first occurrence of each hash, so the survivor is deterministic. `fetch` writes to `cache_dir / file_name` only if absent.
 
 - [ ] **Step 4: Run the tests and verify they pass**
 
@@ -172,7 +191,7 @@ Expected: PASS
 
 ```bash
 git add src/sightline/m2a/images.py tests
-git commit -m "M2a: cache images by name and drop duplicates by perceptual hash"
+git commit -m "M2a: cache images and drop duplicates by difference hash"
 ```
 
 ### Task 4: Conversation generation with provenance
@@ -182,18 +201,35 @@ git commit -m "M2a: cache images by name and drop duplicates by perceptual hash"
 - Test: `tests/unit/test_m2a_annotate.py`
 
 **Interfaces:**
-- Consumes: deduped records with local image paths; the prompt from `tools/annotate_pilot.py` (import it, do not copy it).
-- Produces: `annotate_one(model, image_path, prompt) -> dict` returning `{"messages", "parsed", "tokens_in", "tokens_out", "model", "prompt_sha256"}`; `conversation_id(record, index) -> str`.
+- Consumes: deduped records with local image paths; `PROMPT` and `parse_messages` imported from `tools/annotate_pilot.py`.
+- Produces: `annotate_one(model: str, image_path: Path, call: Callable[[str, Path, str], tuple[str, dict | None]]) -> dict` returning `{"messages", "parsed", "tokens_in", "tokens_out", "model", "prompt_sha256", "image_sha256"}`.
 
 - [ ] **Step 1: Write the failing tests**
 
 ```python
-def test_provenance_is_recorded_on_every_conversation():
-    result = annotate_one("model-x", "prompt", _fake_call_returning_valid_json())
+def _stub(text: str):
+    def call(model, image_path, prompt):
+        return text, {"input": 3179, "output": 99}
+    return call
+
+
+def test_provenance_is_recorded():
+    good = json.dumps({"messages": [{"role": "user", "content": "q"},
+                                    {"role": "assistant", "content": "Red."}]})
+
+    result = annotate_one("model-x", Path("a.png"), _stub(good))
 
     assert result["model"] == "model-x"
     assert result["prompt_sha256"]
+    assert result["image_sha256"]
     assert result["parsed"] is True
+    assert result["tokens_in"] == 3179
+
+
+def test_prose_output_is_marked_unparsed():
+    result = annotate_one("model-x", Path("a.png"), _stub("sorry, I cannot"))
+
+    assert result["parsed"] is False
 ```
 
 - [ ] **Step 2: Run it and verify it fails**
@@ -201,9 +237,9 @@ def test_provenance_is_recorded_on_every_conversation():
 Run: `python3 -m pytest tests/unit/test_m2a_annotate.py -q`
 Expected: FAIL, `ModuleNotFoundError`
 
-- [ ] **Step 3: Implement `annotate.py` reusing the pilot's prompt and parser**
+- [ ] **Step 3: Implement `annotate.py`, importing the pilot's prompt and parser**
 
-Import `PROMPT` and `parse_messages` from `tools/annotate_pilot.py` so the prompt hash is shared. Record the model id and prompt hash on every row. Reuse the pilot's retry and `RateLimited` behaviour so a rate limit stops the run with partial results on disk.
+Do not copy `PROMPT` or `parse_messages`; import them so the prompt hash cannot drift. Hash the image bytes and the prompt, and pass everything through unchanged. The transport callable is injected so the tests need no network.
 
 - [ ] **Step 4: Run the tests and verify they pass**
 
@@ -214,10 +250,10 @@ Expected: PASS
 
 ```bash
 git add src/sightline/m2a/annotate.py tests
-git commit -m "M2a: annotate with the frozen prompt, recording provenance per row"
+git commit -m "M2a: annotate with the frozen prompt, recording provenance"
 ```
 
-### Task 5: Manifest, splits and the budget check
+### Task 5: Manifest, splits and the run record
 
 **Files:**
 - Create: `src/sightline/m2a/manifest.py`
@@ -226,19 +262,26 @@ git commit -m "M2a: annotate with the frozen prompt, recording provenance per ro
 
 **Interfaces:**
 - Consumes: annotated JSONL from Task 4.
-- Produces: `splits(records, seed=0) -> dict[str, list]` splitting by source and hash into train/val/test with no overlap; `manifest(records, path) -> dict` with sha256 of the file and per-source licence counts.
+- Produces: `splits(records: list[dict], seed: int = 0) -> dict[str, list[dict]]` into train/val/test, disjoint and complete; `manifest(records: list[dict], path: Path) -> dict` with the input sha256, per-source and per-licence counts, and the token projection at 3,179 per conversation.
 
 - [ ] **Step 1: Write the failing tests**
 
 ```python
-def test_splits_never_overlap():
+def test_splits_are_disjoint_and_complete():
     records = [{"id": i, "source": "coco", "hash": i} for i in range(300)]
 
     parts = splits(records, seed=0)
+    flat = [r["id"] for part in parts.values() for r in part]
 
-    ids = [set(r["id"] for r in part) for part in parts.values()]
-    assert sum(len(part) for part in parts.values()) == 300
-    assert not (ids[0] & ids[1])
+    assert len(flat) == 300
+    assert len(set(flat)) == 300
+    assert set(parts) == {"train", "val", "test"}
+
+
+def test_split_assignment_is_reproducible():
+    records = [{"id": i, "source": "coco", "hash": i} for i in range(300)]
+
+    assert splits(records, seed=0) == splits(records, seed=0)
 ```
 
 - [ ] **Step 2: Run it and verify it fails**
@@ -248,11 +291,11 @@ Expected: FAIL, `ModuleNotFoundError`
 
 - [ ] **Step 3: Write `tools/build_m2a.py`**
 
-A CLI with subcommands `index`, `filter`, `fetch`, `annotate`, `manifest`, each reading the previous stage's JSONL and resuming from it. Print counts at every stage so a licence drop is visible as a number.
+Subcommands `index`, `filter`, `fetch`, `annotate`, `manifest`, each reading the previous stage's JSONL and resuming from it. Print the record count and the drop count at every stage so a licence drop is visible as a number, not inferred.
 
-- [ ] **Step 4: Implement `splits` and `manifest`**
+- **Step 4: Implement `splits` and `manifest`, and write the run record**
 
-Split by hash into three disjoint parts with a recorded seed. The manifest carries the input file sha256, per-source counts, licence counts, and the token projection at 3,179 tokens per conversation.
+Split by hash with a seeded RNG so the assignment is reproducible. The manifest carries the input sha256, per-source counts, licence counts, and the projection `n_conversations × 3179` tokens. Write a `RunRecord` for the build per project rule 8.
 
 - [ ] **Step 5: Run the tests and verify they pass**
 
@@ -263,13 +306,13 @@ Expected: PASS
 
 ```bash
 git add src/sightline/m2a/manifest.py tools/build_m2a.py tests
-git commit -m "M2a: manifest, disjoint splits, and the token projection"
+git commit -m "M2a: manifest, disjoint splits, and the run record for the build"
 ```
 
 ---
 
 ## Notes for the executor
 
-- The 20k iteration set is the target, not 131k. At 3,179 tokens per conversation, 20k is ~64M tokens and 131k is ~417M, which is over the 200M/day cap (`DECISIONS/0040`).
-- The licence gate is the part that cannot be retrofitted. Build it before fetching images, because after fetching it is tempting to keep what you already have.
-- COCO is the chosen source because it records a licence id per image. That is the property that makes Task 2 automatable; Flickr30k and PixMo would both need manual review.
+- The 20k iteration set is the target, not 131k: at 3,179 tokens each, 20k is ~64M and 131k is ~417M, over the 200M/day cap (`DECISIONS/0040`).
+- The licence gate is built before fetching images, because afterwards it is tempting to keep what you already downloaded.
+- COCO is the source because it records a licence id per image, which is what makes the gate automatable. Flickr30k would need manual review, PixMo has no per-image provenance, and The Cauldron carries 50 sub-licences.
