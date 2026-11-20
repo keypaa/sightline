@@ -3,6 +3,16 @@
 Durable notes from measurement mistakes. Each one cost a run to discover. Add to
 this file rather than relearning.
 
+## 0. Never put durable data in `/tmp`
+
+`/tmp` here is an 11 GB **tmpfs**: fast, volatile, and cleared without warning. The
+COCO annotations file downloaded there vanished, and a later stage had to fall back
+to the committed index. Only throwaway probes belong in `/tmp/opencode/`.
+
+Rule: downloads and caches go to a durable repo-external path (`~/datasets/`, or the
+repo's gitignored `data/`). A stage that cannot be re-run from a durable input is a
+stage that will be lost.
+
 ## 1. The M1 splits are ordered by answer
 
 `generate_m1_dataset` emits examples grouped by answer: all the reds, then the
