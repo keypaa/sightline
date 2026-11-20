@@ -19,12 +19,15 @@ from __future__ import annotations
 import argparse
 import json
 import subprocess
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from sightline.m2a.coco_index import read_annotations
 from sightline.m2a.images import content_hash, dedupe, dhash, fetch
 from sightline.m2a.licence import classify
 from sightline.m2a.manifest import manifest, splits
+from sightline.m2a.sample import sample_subset
 
 COCO_IMAGE_URL = "http://images.cocodataset.org/train2017/"
 DEFAULT_ROOT = Path("experiments/m2a_build")
@@ -73,14 +76,34 @@ def cmd_filter(args: argparse.Namespace) -> int:
 
 def cmd_fetch(args: argparse.Namespace) -> int:
     incoming = read_jsonl(args.root / "filtered.jsonl")
+    if args.limit and args.limit < len(incoming):
+        incoming = sample_subset(list(incoming), args.limit, seed=args.seed)
+        print(
+            f"[fetch] sampled {len(incoming)} of {len(read_jsonl(args.root / 'filtered.jsonl'))}",
+            flush=True,
+        )
     cache = Path(args.cache)
-    kept, dropped = [], []
-    for record in incoming:
+    total = len(incoming)
+    done = 0
+
+    def work(record):
         try:
             path = fetch(record, cache, _get)
-            kept.append({**record, "path": str(path), "sha256": content_hash(path)})
+            return {**record, "path": str(path), "sha256": content_hash(path)}, None
         except Exception as exc:
-            dropped.append({**record, "drop_reason": f"fetch-failed: {type(exc).__name__}"})
+            return record, f"fetch-failed: {type(exc).__name__}"
+
+    kept, dropped = [], []
+    with ThreadPoolExecutor(max_workers=args.workers) as pool:
+        for row, failure in pool.map(work, incoming):
+            if failure:
+                dropped.append({**row, "drop_reason": failure})
+            else:
+                kept.append(row)
+            done += 1
+            if done % 500 == 0:
+                print(f"[fetch] {done}/{total}", flush=True)
+
     hashes = {i: (r["sha256"], dhash(Path(r["path"]))) for i, r in enumerate(kept)}
     keyed = [{**r, "id": i} for i, r in enumerate(kept)]
     deduped, dupes = dedupe(keyed, hashes)
@@ -98,24 +121,42 @@ def _get(url: str) -> bytes:
 
 
 def cmd_annotate(args: argparse.Namespace) -> int:
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
     from sightline.m2a.annotate import annotate_one
 
     incoming = read_jsonl(args.root / "fetched.jsonl")
     done = {row["id"] for row in read_jsonl(args.root / "conversations.jsonl")}
     pending = [r for r in incoming if r["id"] not in done]
+    if args.limit:
+        pending = pending[: args.limit]
 
     out = args.root / "conversations.jsonl"
-    kept = 0
-    for record in pending:
+    lock = threading.Lock()
+    finished = 0
+    unparsed = 0
+
+    def work(record):
         result = annotate_one(args.model, Path(record["path"]), _call)
         row = {k: v for k, v in record.items() if k != "path"}
         row.update(result)
-        with out.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(row) + "\n")
-        kept += 1
-        if kept % 20 == 0:
-            print(f"[annotate] {kept}/{len(pending)}", flush=True)
-    report("annotate", len(incoming), kept, 0, already_done=len(done))
+        return row
+
+    with ThreadPoolExecutor(max_workers=args.workers) as pool:
+        futures = [pool.submit(work, record) for record in pending]
+        for future in as_completed(futures):
+            row = future.result()
+            with lock:
+                with out.open("a", encoding="utf-8") as handle:
+                    handle.write(json.dumps(row) + "\n")
+                finished += 1
+                unparsed += int(not row["parsed"])
+                if finished % 50 == 0:
+                    print(f"[annotate] {finished}/{len(pending)} unparsed={unparsed}", flush=True)
+
+    report(
+        "annotate", len(incoming), finished, unparsed, already_done=len(done), workers=args.workers
+    )
     return 0
 
 
@@ -176,10 +217,14 @@ def main() -> int:
 
     p = sub.add_parser("fetch")
     p.add_argument("--cache", default="artifacts/m2a_images")
+    p.add_argument("--workers", type=int, default=1, help="concurrent downloads")
+    p.add_argument("--limit", type=int, default=0, help="keep only N images, sampled with --seed")
     p.set_defaults(func=cmd_fetch)
 
     p = sub.add_parser("annotate")
     p.add_argument("--model", default=DEFAULT_ANNOTATOR)
+    p.add_argument("--workers", type=int, default=1, help="concurrent opencode calls")
+    p.add_argument("--limit", type=int, default=0, help="annotate at most N pending images")
     p.set_defaults(func=cmd_annotate)
 
     p = sub.add_parser("manifest")
@@ -187,6 +232,7 @@ def main() -> int:
     p.set_defaults(func=cmd_manifest)
 
     args = parser.parse_args()
+    args.seed = getattr(args, "seed", 0)
     return args.func(args)
 
 
