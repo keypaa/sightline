@@ -16,6 +16,7 @@ import json
 import re
 import subprocess
 import threading
+import time
 from collections.abc import Callable
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from pathlib import Path
@@ -116,6 +117,7 @@ class RateLimitGuard:
     def __init__(self, empty_limit: int = 10) -> None:
         self.empty_limit = empty_limit
         self.reason: str | None = None
+        self.rate_limited = False
         self._consecutive_empty = 0
         self._lock = threading.Lock()
 
@@ -126,6 +128,7 @@ class RateLimitGuard:
 
     def note_rate_limit(self, error: RateLimited) -> None:
         with self._lock:
+            self.rate_limited = True
             if self.reason is None:
                 self.reason = f"rate limited (HTTP {error.status}): {error.message}"
 
@@ -194,3 +197,57 @@ def run_pool(
                 submit()
 
     return completed
+
+
+def retry_loop(
+    pending: list[dict[str, Any]],
+    work: Callable[[dict[str, Any]], dict[str, Any]],
+    on_row: Callable[[dict[str, Any]], None],
+    workers: int,
+    *,
+    empty_limit: int = 10,
+    wait_seconds: int = 3600,
+    max_waits: int = 120,
+    sleeper: Callable[[int], None] = time.sleep,
+    reporter: Callable[..., None] = print,
+) -> tuple[int, int]:
+    """Resume after each quota window, waiting only on a confirmed rate limit.
+
+    Returns the number of distinct rows completed and the number of waits used.
+    A record whose call failed is left in ``remaining`` and retried next window;
+    the rows that did complete are never re-annotated.
+    """
+
+    remaining = list(pending)
+    completed = 0
+    waits = 0
+
+    while remaining:
+        guard = RateLimitGuard(empty_limit=empty_limit)
+        finished_ids: set[Any] = set()
+
+        def tracked(row: dict[str, Any], finished_ids: set[Any] = finished_ids) -> None:
+            on_row(row)
+            finished_ids.add(row.get("id"))
+
+        run_pool(remaining, work, tracked, workers, guard)
+        completed += len(finished_ids)
+        remaining = [row for row in remaining if row.get("id") not in finished_ids]
+
+        if not guard.tripped or not remaining:
+            break
+        if not guard.rate_limited:
+            reporter(f"[retry] stopped: {guard.reason}")
+            break
+        if waits >= max_waits:
+            reporter(f"[retry] stopped: {max_waits} waits exhausted")
+            break
+
+        waits += 1
+        reporter(
+            f"[retry] quota window {waits}/{max_waits}: "
+            f"{completed} done, {len(remaining)} left; waiting {wait_seconds}s"
+        )
+        sleeper(wait_seconds)
+
+    return completed, waits

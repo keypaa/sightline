@@ -121,7 +121,7 @@ def _get(url: str) -> bytes:
 
 def cmd_annotate(args: argparse.Namespace) -> int:
     from sightline.m2a.annotate import annotate_one, pending_records
-    from sightline.m2a.transport import RateLimitGuard, cli_call, run_pool
+    from sightline.m2a.transport import cli_call, retry_loop
 
     incoming = read_jsonl(args.root / "fetched.jsonl")
     done_rows = read_jsonl(args.root / "conversations.jsonl")
@@ -149,8 +149,15 @@ def cmd_annotate(args: argparse.Namespace) -> int:
             if finished % 50 == 0:
                 print(f"[annotate] {finished}/{len(pending)} unparsed={unparsed}", flush=True)
 
-    guard = RateLimitGuard(empty_limit=args.empty_limit)
-    completed = run_pool(pending, work, on_row, workers=args.workers, guard=guard)
+    completed, waits = retry_loop(
+        pending,
+        work,
+        on_row,
+        workers=args.workers,
+        empty_limit=args.empty_limit,
+        wait_seconds=args.wait_seconds,
+        max_waits=args.max_waits,
+    )
 
     report(
         "annotate",
@@ -159,11 +166,11 @@ def cmd_annotate(args: argparse.Namespace) -> int:
         unparsed,
         already_done=len(incoming) - len(pending_all),
         attempted=len(pending),
+        waits=waits,
         workers=args.workers,
         empty_limit=args.empty_limit,
     )
-    if guard.tripped:
-        print(f"[annotate] STOPPED: {guard.reason}", flush=True)
+    if completed < len(pending):
         print("[annotate] partial results kept; re-run this stage to resume", flush=True)
         return 1
     return 0
@@ -207,6 +214,18 @@ def main() -> int:
         type=int,
         default=10,
         help="stop after this many consecutive responses with no token usage (DECISIONS 0044)",
+    )
+    p.add_argument(
+        "--wait-seconds",
+        type=int,
+        default=3600,
+        help="seconds to wait after a 429 before resuming (DECISIONS 0045)",
+    )
+    p.add_argument(
+        "--max-waits",
+        type=int,
+        default=120,
+        help="maximum quota windows to wait before stopping (DECISIONS 0045)",
     )
     p.set_defaults(func=cmd_annotate)
 

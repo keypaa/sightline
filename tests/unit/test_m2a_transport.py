@@ -180,3 +180,91 @@ def test_guard_also_trips_on_a_non_rate_transport_error() -> None:
 
     assert guard.tripped
     assert "transport error" in (guard.reason or "")
+
+
+def test_guard_distinguishes_rate_limits_from_other_transport_errors() -> None:
+    rate = RateLimitGuard(empty_limit=100)
+    rate.note_rate_limit(RateLimited(status=429, message="Rate limit exceeded"))
+
+    other = RateLimitGuard(empty_limit=100)
+    other.note_transport_error(TransportError("opencode exited with code 1"))
+
+    assert rate.rate_limited
+    assert not other.rate_limited
+
+
+def test_retry_loop_waits_for_the_quota_window_and_finishes() -> None:
+    from sightline.m2a.transport import retry_loop
+
+    attempts: dict[int, int] = {}
+    sleeps: list[int] = []
+
+    def work(record):
+        rid = record["id"]
+        attempts[rid] = attempts.get(rid, 0) + 1
+        if rid == 1 and attempts[rid] == 1:
+            raise RateLimited(status=429, message="Rate limit exceeded")
+        return {"id": rid, "parsed": True, "tokens_in": 10, "tokens_out": 2}
+
+    rows = []
+    completed, waits = retry_loop(
+        [{"id": i} for i in range(3)],
+        work,
+        rows.append,
+        workers=2,
+        wait_seconds=3600,
+        max_waits=3,
+        sleeper=sleeps.append,
+        reporter=lambda *a: None,
+    )
+
+    assert completed == 3
+    assert waits == 1
+    assert sleeps == [3600]
+    assert {r["id"] for r in rows} == {0, 1, 2}
+
+
+def test_retry_loop_stops_at_the_wait_cap() -> None:
+    from sightline.m2a.transport import retry_loop
+
+    def work(record):
+        raise RateLimited(status=429, message="Rate limit exceeded")
+
+    sleeps: list[int] = []
+    completed, waits = retry_loop(
+        [{"id": i} for i in range(5)],
+        work,
+        lambda row: None,
+        workers=2,
+        wait_seconds=60,
+        max_waits=2,
+        sleeper=sleeps.append,
+        reporter=lambda *a: None,
+    )
+
+    assert completed == 0
+    assert waits == 2
+    assert sleeps == [60, 60]
+
+
+def test_retry_loop_does_not_wait_for_a_non_rate_transport_error() -> None:
+    from sightline.m2a.transport import retry_loop
+
+    def work(record):
+        raise TransportError("opencode exited with code 1")
+
+    sleeps: list[int] = []
+    completed, waits = retry_loop(
+        [{"id": 0}],
+        work,
+        lambda row: None,
+        workers=1,
+        wait_seconds=60,
+        max_waits=3,
+        sleeper=sleeps.append,
+        reporter=lambda *a: None,
+    )
+
+    assert completed == 0
+    assert waits == 0
+    assert sleeps == []
