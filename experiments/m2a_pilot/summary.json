@@ -1,0 +1,10 @@
+{
+  "model": "kilo/nvidia/nemotron-3.5-super-vl:free",
+  "n": 30,
+  "parse_rate": 1.0,
+  "grounded_of_parsed": 0.6,
+  "mean_turns": 2.73,
+  "tokens_in_mean": 9953,
+  "tokens_in_total": 298579,
+  "projected_40k_tokens_in": 398105333
+}
