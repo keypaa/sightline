@@ -125,9 +125,8 @@ def cmd_annotate(args: argparse.Namespace) -> int:
 
     incoming = read_jsonl(args.root / "fetched.jsonl")
     done_rows = read_jsonl(args.root / "conversations.jsonl")
-    pending = pending_records(incoming, done_rows)
-    if args.limit:
-        pending = pending[: args.limit]
+    pending_all = pending_records(incoming, done_rows)
+    pending = pending_all[: args.limit] if args.limit else pending_all
 
     out = args.root / "conversations.jsonl"
     lock = threading.Lock()
@@ -158,7 +157,8 @@ def cmd_annotate(args: argparse.Namespace) -> int:
         len(incoming),
         completed,
         unparsed,
-        already_done=len(done_rows),
+        already_done=len(incoming) - len(pending_all),
+        attempted=len(pending),
         workers=args.workers,
         empty_limit=args.empty_limit,
     )
