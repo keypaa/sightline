@@ -1,0 +1,16 @@
+{
+  "method": "utf-8 byte strings; K3 tiktoken.model vs reader tokenizer.json",
+  "reader": "Qwen/Qwen3-1.7B",
+  "reader_revision": "70d244cc86ccca08cf5af4e1e306ecf908b1ad5e",
+  "encoder": "moonshotai/Kimi-K3",
+  "encoder_revision": "f831ab66814297da540d832a5235f8e904f29d06",
+  "reader_tokens": 151669,
+  "encoder_tokens": 163584,
+  "shared_bytes": 34995,
+  "shared_bytes_fraction_of_reader": 0.2307,
+  "shared_strings": 34995,
+  "shared_strings_fraction_of_reader": 0.2307,
+  "encoder_tokens_not_valid_utf8": 1172,
+  "reader_only": 116674,
+  "encoder_only": 128589
+}
