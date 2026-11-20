@@ -42,6 +42,18 @@ image = (
         "artifacts/k3_vision_f831ab66.safetensors",
         "/root/artifacts/k3_vision_f831ab66.safetensors",
     )
+    .add_local_file(
+        "artifacts/m1b/seed0/projector.pt",
+        "/root/artifacts/m1b/seed0/projector.pt",
+    )
+    .add_local_file(
+        "artifacts/m1b/seed1/projector.pt",
+        "/root/artifacts/m1b/seed1/projector.pt",
+    )
+    .add_local_file(
+        "artifacts/m1b/seed2/projector.pt",
+        "/root/artifacts/m1b/seed2/projector.pt",
+    )
 )
 
 
