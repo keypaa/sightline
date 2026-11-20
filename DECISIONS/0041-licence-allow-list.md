@@ -45,7 +45,22 @@ licence per image, which is what makes the gate automatable. Flickr30k is
 excluded from any commercial use; PixMo and Cauldron would need manual
 provenance work before download.
 
+## Measured outcome (2026-11-18)
+
+Run on the full `instances_train2017.json` (118,287 images): **30,836 kept
+(26.1%), 87,451 dropped (73.9%)** — 81,459 non-commercial and 5,992
+no-derivatives. Survivors are CC BY 2.0 (19,470), CC BY-SA 2.0 (10,901) and
+no-known-restrictions (465). Detail in `reports/m2a-coco-licence-audit.md`. [V]
+
+The dataset card's CC BY 4.0 covered the annotations only; three quarters of the
+photographs were unusable. Trusting the card would have ingested 118k images we
+had no right to use.
+
+Consequence: COCO supports the 20k iteration set but not the 131k reproduction on
+one conversation per image.
+
 ## Open items
 
-- [U] The drop rate on real COCO. Closing step: run the index and filter stages
-  on the full 2017 annotations file and record the counts.
+- [U] Whether the reproduction run uses multiple conversations per image or a
+  second source. Owner: implementation agent. Closing step: a DECISIONS entry
+  once the iteration run shows how many conversations per image are useful.
