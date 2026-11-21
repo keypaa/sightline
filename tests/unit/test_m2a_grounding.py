@@ -99,3 +99,17 @@ def test_review_page_names_every_image_and_carries_the_licence(tmp_path: Path):
     assert "1.jpg" in html
     assert "CC BY 2.0" in html
     assert "human_confirmed" not in html or "I checked this image" in html
+
+
+def test_review_page_uses_absolute_file_urls(tmp_path: Path):
+    """A relative src is read as a host name, not a path, so images never load."""
+
+    rows = blank_labels(records(1), [0])
+    out = tmp_path / "review.html"
+
+    render_review_html(rows, out)
+
+    html = out.read_text()
+    assert 'src="file:///' in html
+    assert "file://artifacts" not in html
+    assert "file://tmp" not in html

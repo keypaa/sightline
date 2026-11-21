@@ -36,6 +36,9 @@ ATTRIBUTE_QUESTIONS = {
 DEFAULT_SAMPLE = 50
 DEFAULT_SEED = 0
 
+# Repo root, so a relative image path becomes a real file:// URL.
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
 
 def sample_ids(records: list[dict[str, Any]], n: int, seed: int) -> list[int]:
     """Pick n records reproducibly, by the same seeded sample the fetch uses."""
@@ -150,9 +153,13 @@ def render_review_html(rows: list[dict[str, Any]], out: Path) -> None:
             for attribute in ATTRIBUTES
         )
         checked_attr = "checked" if row.get("human_confirmed") else ""
+        # A relative path is not a file URL: browsers read "file://artifacts/..." as
+        # a host named "artifacts". Resolve against the repo root so the page can
+        # load images from wherever it is opened.
+        image_uri = (PROJECT_ROOT / row["path"]).resolve().as_uri()
         cards.append(
             f"""<article class="card" data-id="{row["id"]}">
-  <img loading="lazy" src="file://{row["path"]}" alt="{row["file_name"]}">
+  <img loading="lazy" src="{image_uri}" alt="{row["file_name"]}">
   <div class="body">
     <h2>{row["file_name"]}</h2>
     <p class="meta">id {row["id"]} &middot; sha256 {row["sha256"][:16]}&hellip;</p>
