@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from tools.m2a_review import _verdict_rows, render, stratify
@@ -90,3 +91,32 @@ def test_cards_are_inside_main(tmp_path: Path):
     main_end = html.index("</main>")
     card_at = html.index('<article class="card"')
     assert main_start < card_at < main_end
+
+
+def test_merge_writes_one_row_per_decision(tmp_path: Path):
+    from tools.m2a_review import merge_decisions
+
+    export = {"decisions": [{"image_id": 1, "turn": 1, "decision": "right"}]}
+    added, rejected = merge_decisions(
+        export,
+        tmp_path / "d.jsonl",
+        reviewer="k",
+        reviewed_at="2026-11-21T00:00:00+00:00",
+    )
+    assert (added, rejected) == (1, 0)
+
+
+def test_merge_rejects_a_decision_with_no_matching_claim(tmp_path: Path):
+    from tools.m2a_review import merge_decisions
+
+    claims = tmp_path / "claims.jsonl"
+    claims.write_text(json.dumps({"claim_id": "abc", "image_id": 1, "turn": 1}) + "\n")
+    export = {"decisions": [{"image_id": 2, "turn": 9, "decision": "right"}]}
+    added, rejected = merge_decisions(
+        export,
+        tmp_path / "d.jsonl",
+        reviewer="k",
+        reviewed_at="2026-11-21T00:00:00+00:00",
+        claims_path=claims,
+    )
+    assert (added, rejected) == (0, 1)

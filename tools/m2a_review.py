@@ -23,6 +23,8 @@ import random
 from pathlib import Path
 from typing import Any
 
+from sightline.m2a.ids import now_iso
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 VERDICT_LABEL = {"true": "supported", "false": "contradicted", "can't-tell": "unsure"}
 
@@ -188,6 +190,51 @@ def render(rows: list[dict[str, Any]], out: Path, images_dir: Path, title: str) 
     )
 
 
+def merge_decisions(
+    export: dict,
+    out: Path,
+    *,
+    reviewer: str,
+    reviewed_at: str,
+    claims_path: Path | None = None,
+) -> tuple[int, int]:
+    """Fold a review-page export into decisions.jsonl.
+
+    The browser page knows ``(image_id, turn)``; the corpus knows ``claim_id``.
+    When a claims file is given, every exported pair is resolved to its claim and
+    an unresolvable one is rejected rather than written — an orphan decision would
+    inflate the human-agreement rate without ever having been checked.
+    """
+
+    claims_by_pair: dict[tuple, str] = {}
+    if claims_path is not None and Path(claims_path).exists():
+        for row in read_jsonl(Path(claims_path)):
+            claims_by_pair[(row.get("image_id"), row.get("turn"))] = row.get("claim_id")
+
+    added = 0
+    rejected = 0
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with out.open("a", encoding="utf-8") as handle:
+        for entry in export.get("decisions") or []:
+            pair = (entry.get("image_id"), entry.get("turn"))
+            claim_id = claims_by_pair.get(pair)
+            if claims_path is not None and claim_id is None:
+                rejected += 1
+                continue
+            row = {
+                "claim_id": claim_id,
+                "image_id": pair[0],
+                "turn": pair[1],
+                "decision": entry.get("decision"),
+                "truth": entry.get("truth"),
+                "reviewer": reviewer,
+                "reviewed_at": reviewed_at,
+            }
+            handle.write(json.dumps(row) + "\n")
+            added += 1
+    return added, rejected
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -198,7 +245,27 @@ def main() -> int:
     parser.add_argument("--title", default="M2a calibration review")
     parser.add_argument("--sample", type=int, default=50, help="items to show; 0 means all")
     parser.add_argument("--seed", type=int, default=0)
+
+    parser.add_argument(
+        "--merge", type=Path, default=None, help="fold this review export into decisions.jsonl"
+    )
+    parser.add_argument(
+        "--out", type=Path, default=Path("experiments/m2a_grounding/decisions.jsonl")
+    )
+    parser.add_argument("--reviewer", default="owner")
     args = parser.parse_args()
+
+    if args.merge is not None:
+        export = json.loads(args.merge.read_text())
+        added, rejected = merge_decisions(
+            export,
+            args.out,
+            reviewer=args.reviewer,
+            reviewed_at=now_iso(),
+            claims_path=args.claims,
+        )
+        print(f"[merge] {added} decisions written, {rejected} rejected", flush=True)
+        return 0 if rejected == 0 else 1
 
     rows = _verdict_rows(read_jsonl(args.claims))
     if not rows:
