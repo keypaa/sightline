@@ -3,7 +3,24 @@
 Durable notes from measurement mistakes. Each one cost a run to discover. Add to
 this file rather than relearning.
 
-## 0. Never put durable data in `/tmp`
+## 0. The unit test suite is not cheap
+
+`pytest tests/unit` has been observed taking **7 GB+ of RAM and pinning all six
+cores**, because `tests/unit/test_reader_qwen3.py` loads real Qwen3 weights from
+disk and nine unit modules import torch at module level. Nothing marks those tests
+`slow`, so a routine full-suite run pays the model load every time.
+
+Rule: run the narrowest selection that covers the change
+(`pytest tests/unit/test_m2a_transport.py`), and treat a full-suite run as a
+deliberate step at a task boundary, not a default reflex. [V — measured on this
+machine, 2026-11-21]
+
+The fix is not to delete the coverage: it is to mark the checkpoint-loading tests
+`slow` (they already have a marker) or move them behind a session-scoped fixture,
+so the cheap tests stay cheap. Until that is done, the measurement above is the
+budget.
+
+## 1. Never put durable data in `/tmp`
 
 `/tmp` here is an 11 GB **tmpfs**: fast, volatile, and cleared without warning. The
 COCO annotations file downloaded there vanished, and a later stage had to fall back

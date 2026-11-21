@@ -93,6 +93,7 @@ reports/            generated reports (small, diffable)
 
 - Environment: `uv sync` (reads `uv.lock`; Python 3.12+; torch 2.13.0+cu130). Without sync, prefix Python commands with `PYTHONPATH=src`.
 - Tests: `pytest` (config in `pyproject.toml`; `pythonpath = ["src"]`). Tower tests are `slow`-marked and skipped by default; run with `pytest -m slow`.
+- **The unit suite is heavy — do not run it casually.** `tests/unit/test_reader_qwen3.py` loads real Qwen3 weights from disk and nine unit modules import torch, so a full run has been observed taking 7 GB+ of RAM and pinning all cores. Prefer the narrowest selection that covers your change (`pytest tests/unit/test_m2a_transport.py`), and leave full-suite runs to a deliberate check. [V — measured on this machine, 2026-11-21]
 - Lint: `ruff check src tests modal`.
 - Format: `ruff format --check src tests modal` (write with `ruff format src tests modal`).
 - Dry run: `python -m sightline.record --dry-run --out experiments/_dryrun`.
