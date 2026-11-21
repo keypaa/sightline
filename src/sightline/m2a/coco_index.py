@@ -28,17 +28,21 @@ def read_annotations(path: Path) -> tuple[list[dict[str, Any]], dict[int, dict[s
     for image in data.get("images", []):
         licence_id = image.get("license")
         entry = table.get(int(licence_id)) if licence_id is not None else None
-        records.append(
-            {
-                "id": int(image["id"]),
-                "file_name": image["file_name"],
-                "license_id": int(licence_id) if licence_id is not None else None,
-                "license_name": entry["name"] if entry else None,
-                "license_url": entry.get("url") if entry else None,
-                # s.4(a) requires crediting the original author; COCO records no
-                # author name, so the Flickr URL is the attribution route.
-                "flickr_url": image.get("flickr_url"),
-                "coco_url": image.get("coco_url"),
-            }
-        )
+        record = {
+            "id": int(image["id"]),
+            "file_name": image["file_name"],
+            "license_id": int(licence_id) if licence_id is not None else None,
+            "license_name": entry["name"] if entry else None,
+            "license_url": entry.get("url") if entry else None,
+            # s.4(a) requires crediting the original author; COCO records no
+            # author name, so the Flickr URL is the attribution route.
+            "flickr_url": image.get("flickr_url"),
+            "coco_url": image.get("coco_url"),
+        }
+        # Provenance travels with the image, not with the URL it was found at.
+        record["source"] = "coco"
+        # The annotations file has no per-image checksum; the fetch stage fills
+        # this in once the file is downloaded, if it is not already present.
+        record.setdefault("expected_sha256", None)
+        records.append(record)
     return records, table
