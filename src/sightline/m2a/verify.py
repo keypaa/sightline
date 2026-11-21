@@ -358,31 +358,36 @@ def build_verifier_prompt(claim: Claim, *, adversarial: bool = False) -> str:
 
 
 def summarise(results: list[ClaimResult]) -> dict[str, Any]:
-    """Report contradiction, can't-tell and per-type rates, with a Wilson interval."""
+    """Report contradiction, can't-tell and per-type rates, with a Wilson interval.
+
+    A call that failed is a gap, not a "can't-tell": counting errors as unsure would
+    turn a rate limit into an apparently cautious model.
+    """
 
     n = len(results)
-    contradicted = sum(1 for r in results if r.contradicted)
-    unsure = sum(
-        1 for r in results if r.verdicts and all(v.verdict == VERDICT_UNSURE for v in r.verdicts)
-    )
+    judged = [r for r in results if r.verdicts and all(not v.error for v in r.verdicts)]
+    errored = n - len(judged)
+    contradicted = sum(1 for r in judged if r.contradicted)
+    unsure = sum(1 for r in judged if all(v.verdict == VERDICT_UNSURE for v in r.verdicts))
 
     by_type: dict[str, dict[str, int]] = {}
-    for result in results:
+    for result in judged:
         bucket = by_type.setdefault(
             result.claim.claim_type, {"n": 0, "contradicted": 0, "unsure": 0}
         )
         bucket["n"] += 1
         bucket["contradicted"] += int(result.contradicted)
-        bucket["unsure"] += int(
-            bool(result.verdicts) and all(v.verdict == VERDICT_UNSURE for v in result.verdicts)
-        )
+        bucket["unsure"] += int(all(v.verdict == VERDICT_UNSURE for v in result.verdicts))
 
+    n_judged = len(judged)
     return {
         "n_claims": n,
+        "n_judged": n_judged,
+        "n_errored": errored,
         "contradicted": contradicted,
-        "contradiction_rate": (contradicted / n) if n else None,
-        "contradiction_rate_upper_95": wilson_upper(contradicted, n),
-        "can_tell_share": (unsure / n) if n else None,
+        "contradiction_rate": (contradicted / n_judged) if n_judged else None,
+        "contradiction_rate_upper_95": wilson_upper(contradicted, n_judged),
+        "can_tell_share": (unsure / n_judged) if n_judged else None,
         "by_type": dict(sorted(by_type.items())),
         "thresholds": {
             "contradiction_ceiling": CONTRADICTION_CEILING,
@@ -489,6 +494,31 @@ def _result_to_row(result: ClaimResult) -> dict[str, Any]:
     }
 
 
+def sample_claims(claims: list[Claim], n: int, seed: int = 0) -> list[Claim]:
+    """Take n claims reproducibly, spread across claim types.
+
+    Judging every claim is unnecessary for a rate: a few hundred gives a tight
+    interval, and the free verifiers are metered.
+    """
+
+    if n <= 0 or n >= len(claims):
+        return list(claims)
+    by_type: dict[str, list[Claim]] = {}
+    for claim in claims:
+        by_type.setdefault(claim.claim_type, []).append(claim)
+    rng = random.Random(seed)
+    per_type = max(1, n // max(1, len(by_type)))
+    picked: list[Claim] = []
+    for bucket in by_type.values():
+        picked.extend(rng.sample(bucket, min(per_type, len(bucket))))
+    rng.shuffle(picked)
+    if len(picked) < n:
+        chosen = {id(c) for c in picked}
+        rest = [c for c in claims if id(c) not in chosen]
+        picked.extend(rng.sample(rest, min(n - len(picked), len(rest))))
+    return picked[:n]
+
+
 def judge_claims(
     claims: list[Claim],
     callers: list[Any],
@@ -496,6 +526,7 @@ def judge_claims(
     existing: list[dict[str, Any]] | None = None,
     on_row: Any = None,
     workers: int = 1,
+    max_consecutive_failures: int = 10,
 ) -> list[ClaimResult]:
     """Judge every claim with every caller, resuming from an existing results file.
 
@@ -551,11 +582,16 @@ def judge_claims(
 
     results: list[ClaimResult] = []
     if workers <= 1:
+        consecutive_failures = 0
         for item in todo:
             result = work(item)
             results.append(result)
             if on_row is not None:
                 on_row(result)
+            failed = bool(result.verdicts) and all(v.error for v in result.verdicts)
+            consecutive_failures = consecutive_failures + 1 if failed else 0
+            if consecutive_failures >= max_consecutive_failures:
+                return results
         return results
 
     with ThreadPoolExecutor(max_workers=workers) as pool:
@@ -621,6 +657,8 @@ def main() -> int:
     judge.add_argument("--out", type=Path, default=Path("experiments/m2a_grounding/verdicts.jsonl"))
     judge.add_argument("--timeout", type=int, default=300)
     judge.add_argument("--workers", type=int, default=1, help="claims judged concurrently")
+    judge.add_argument("--sample", type=int, default=0, help="judge at most N claims (0 means all)")
+    judge.add_argument("--sample-seed", type=int, default=0)
 
     blind = sub.add_parser("blind", help="questions -> text-only answers")
     blind.add_argument(
@@ -679,8 +717,21 @@ def main() -> int:
 
     if args.command == "judge":
         claims = [_claim_from_row(row) for row in read_jsonl(args.claims)]
+        real_count = len(claims)
         if args.planted:
             claims += [_claim_from_row(row) for row in read_jsonl(args.planted)]
+        if args.sample:
+            # Sample real and planted separately so the planted ratio stays honest.
+            claims = sample_claims(claims[:real_count], args.sample, args.sample_seed)
+            claims += (
+                sample_claims(
+                    [_claim_from_row(r) for r in read_jsonl(args.planted)],
+                    args.sample,
+                    args.sample_seed,
+                )
+                if args.planted
+                else []
+            )
         callers = [OpencodeCaller(model, timeout=args.timeout) for model in args.models]
         existing = read_jsonl(args.out)
 
@@ -696,7 +747,11 @@ def main() -> int:
                 written.append(row)
 
         results = judge_claims(
-            claims, callers, existing=existing, on_row=on_row, workers=args.workers
+            claims,
+            callers,
+            existing=existing,
+            on_row=on_row,
+            workers=args.workers,
         )
         summary = summarise(results)
         print(json.dumps(summary, indent=2), flush=True)
