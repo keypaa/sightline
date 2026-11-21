@@ -220,3 +220,22 @@ def test_wilson_upper_is_wider_than_the_point_estimate():
     assert upper is not None
     assert upper > 0.9
     assert upper < 1.0
+
+
+def test_count_referent_is_the_thing_counted_not_the_sentence_tail():
+    from sightline.m2a.verify import make_declarative
+
+    assert make_declarative("How many tiers does the cake have?", "Five.") == (
+        "Five (tiers of the cake)"
+    )
+    # The preposition from the question is kept, so the referent reads naturally.
+    assert make_declarative("How many wheels are visible on the skateboard?", "Four.") == (
+        "Four (wheels on the skateboard)"
+    )
+    assert make_declarative("How many people are there?", "Two.") == "Two (people)"
+
+
+def test_colour_referent_is_unchanged_by_the_count_fix():
+    from sightline.m2a.verify import make_declarative
+
+    assert make_declarative("What color is the woman's skirt?", "Red.") == ("Red (woman's skirt)")

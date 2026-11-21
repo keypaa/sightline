@@ -225,19 +225,54 @@ def resolve_image_path(
 def make_declarative(question: str, answer: str) -> str:
     """Turn a Q/A pair into a single statement that names its referent.
 
-    The referent is whatever noun phrase the question asks about, kept verbatim so a
-    verifier can check the claim without guessing which object is meant.
+    The referent is what tells a verifier *what* the claim is about, so it has to be
+    the counted or described thing, not the tail of the sentence. "How many tiers
+    does the cake have?" must yield "tiers of the cake", not "cake have" — otherwise
+    the verifier is guessing at the subject of the claim.
     """
+
+    referent = _count_referent(question) or _general_referent(question)
+    if referent:
+        return f"{answer.rstrip('. ')} ({referent})"
+    return answer.rstrip(". ")
+
+
+def _count_referent(question: str) -> str | None:
+    """The thing being counted, and what it belongs to, for a how-many question."""
+
+    match = re.match(
+        r"\s*how many\s+(.+?)\s+(?:does|do|are|is|can|will|would)\s+(.+?)\s*\?",
+        question,
+        flags=re.IGNORECASE,
+    )
+    if match:
+        counted = match.group(1).strip()
+        rest = match.group(2).strip()
+        # Strip the trailing verb ("the cake have" -> "the cake") and a leading
+        # "visible", which describes the verb rather than the holder.
+        rest = re.sub(r"\s+(?:have|has|there)\s*$", "", rest).strip()
+        rest = re.sub(r"^visible\s+", "", rest).strip()
+        if rest.lower() in ("there", "there are"):
+            rest = ""
+        if not rest:
+            return counted
+        if rest.lower().startswith("the "):
+            return f"{counted} of {rest}"
+        return f"{counted} {rest}"
+
+    match = re.match(r"\s*how many\s+(.+?)\s*\?", question, flags=re.IGNORECASE)
+    return match.group(1).strip() if match else None
+
+
+def _general_referent(question: str) -> str | None:
+    """The noun phrase after a preposition or linking verb."""
 
     match = re.search(
         r"\b(?:about|of|is|are|does|do|for)\s+(?:the\s+)?(.+?)\s*\?",
         question,
         flags=re.IGNORECASE,
     )
-    referent = match.group(1).strip(" .") if match else None
-    if referent:
-        return f"{answer.rstrip('. ')} ({referent})"
-    return answer.rstrip(". ")
+    return match.group(1).strip(" .") if match else None
 
 
 def _swap_colour(claim: str) -> str | None:
