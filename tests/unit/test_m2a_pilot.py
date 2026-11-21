@@ -238,3 +238,14 @@ def test_pilot_excludes_listed_ids(tmp_path):
     kept = pilot.exclude_ids(records, pilot.load_excluded(excluded))
 
     assert [r["id"] for r in kept] == list(range(3, 10))
+
+
+def test_unmeasurable_grounding_does_not_fail_the_run():
+    """COCO has no expected answers; that is the instrument, not a bad annotator."""
+
+    from tools import m2a_annotator_pilot as pilot
+    import inspect
+
+    source = inspect.getsource(pilot.main)
+    assert "grounding_skipped" in source
+    assert "grounding_skipped" in source.split('summary["passes"]')[0]

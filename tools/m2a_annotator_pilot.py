@@ -253,7 +253,14 @@ def main(argv: list[str] | None = None) -> int:
     summary["passes_grounded_bar"] = (
         summary["grounding_measurable"] and summary["grounded_rate"] >= GROUNDED_BAR
     )
-    summary["passes"] = summary["passes_parse_bar"] and summary["passes_grounded_bar"]
+    # COCO carries captions, not question/answer labels, so grounding is not
+    # measurable here (DECISIONS 0049). That is a property of the instrument, not a
+    # failed annotation, and it must not fail an otherwise good run. The gate for
+    # this stage is claim contradiction, measured after the run by m2a.verify.
+    summary["grounding_skipped"] = not summary["grounding_measurable"]
+    summary["passes"] = summary["passes_parse_bar"] and (
+        summary["grounding_skipped"] or summary["passes_grounded_bar"]
+    )
 
     (args.out / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
     run_record = {
