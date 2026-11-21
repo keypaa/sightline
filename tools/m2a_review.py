@@ -217,7 +217,8 @@ def merge_decisions(
     with out.open("a", encoding="utf-8") as handle:
         for entry in export.get("decisions") or []:
             pair = (entry.get("image_id"), entry.get("turn"))
-            claim_id = claims_by_pair.get(pair)
+            # Prefer the id the page carried; (image_id, turn) is the legacy key.
+            claim_id = entry.get("claim_id") or claims_by_pair.get(pair)
             if claims_path is not None and claim_id is None:
                 rejected += 1
                 continue

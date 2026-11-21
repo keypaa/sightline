@@ -30,6 +30,7 @@ LAYERS = (
     "fetched.jsonl",
     "conversations.jsonl",
     "claims.jsonl",
+    "planted.jsonl",
     "verdicts.jsonl",
     "blind.jsonl",
     "decisions.jsonl",
@@ -76,7 +77,9 @@ def build(root: Path) -> dict[str, Any]:
     layers = {name: read_jsonl(root / name) for name in LAYERS}
     fetched = layers["fetched.jsonl"]
     conversations = [r for r in layers["conversations.jsonl"] if r.get("parsed") is not False]
-    claims = layers["claims.jsonl"]
+    # Planted claims live in their own file; the gate needs them alongside the real
+    # ones, and their `planted` flag keeps them out of the contradiction rate.
+    claims = layers["claims.jsonl"] + layers["planted.jsonl"]
     results = _results(claims, layers["verdicts.jsonl"])
 
     real = [r for r in results if not r.claim.planted]

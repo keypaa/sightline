@@ -120,3 +120,18 @@ def test_merge_rejects_a_decision_with_no_matching_claim(tmp_path: Path):
         claims_path=claims,
     )
     assert (added, rejected) == (0, 1)
+
+
+def test_merge_prefers_a_claim_id_from_the_export(tmp_path: Path):
+    """The page can carry claim_id directly; (image_id, turn) is the legacy fallback."""
+
+    from tools.m2a_review import merge_decisions
+
+    export = {"decisions": [{"claim_id": "abc", "image_id": 99, "turn": 9, "decision": "right"}]}
+    out = tmp_path / "d.jsonl"
+    added, rejected = merge_decisions(
+        export, out, reviewer="k", reviewed_at="2026-11-21T00:00:00+00:00"
+    )
+    assert (added, rejected) == (1, 0)
+    row = json.loads(out.read_text().splitlines()[0])
+    assert row["claim_id"] == "abc"

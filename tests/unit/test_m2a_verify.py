@@ -303,7 +303,7 @@ def test_verdict_row_is_flat():
 
 
 def test_judge_resumes_from_flat_rows():
-    from sightline.m2a.verify import Verdict, judge_claims
+    from sightline.m2a.verify import judge_claims
 
     class Stub:
         def __init__(self, model, verdict):

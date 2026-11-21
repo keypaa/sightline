@@ -84,3 +84,34 @@ def test_manifest_reads_sources_and_licences(tmp_path: Path):
     assert manifest["source_count"] == 1
     assert manifest["sources"] == {"coco": 2}
     assert manifest["licences"]["CC BY 2.0"] == 1
+
+
+def test_manifest_reads_planted_claims(tmp_path: Path):
+    write_jsonl(
+        tmp_path / "claims.jsonl",
+        [{"claim_id": "a", "image_id": 1, "turn": 1, "claim": "c", "claim_type": "colour"}],
+    )
+    write_jsonl(
+        tmp_path / "planted.jsonl",
+        [
+            {
+                "claim_id": "p",
+                "image_id": 1,
+                "turn": 1,
+                "claim": "blue (car)",
+                "claim_type": "colour",
+                "planted": True,
+            }
+        ],
+    )
+    write_jsonl(
+        tmp_path / "verdicts.jsonl",
+        [
+            {"claim_id": "a", "verifier_model": "v", "verdict": "true", "error": None},
+            {"claim_id": "p", "verifier_model": "v", "verdict": "false", "error": None},
+        ],
+    )
+
+    manifest = build(tmp_path)
+
+    assert manifest["planted_rejection_rate"] == 1.0

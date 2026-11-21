@@ -208,6 +208,10 @@ def cmd_annotate(args: argparse.Namespace) -> int:
             check_single_annotator(done_rows, row)
             with out.open("a", encoding="utf-8") as handle:
                 handle.write(json.dumps(row) + "\n")
+            # Keep the in-memory view current: a later row in this same run must be
+            # checked against what is already written, not only against the file as
+            # it was at startup.
+            done_rows.append(row)
             if not row["parsed"]:
                 # Unparsed rows stay in conversations.jsonl so resume retries them;
                 # this file is the per-run audit of what came back unusable.

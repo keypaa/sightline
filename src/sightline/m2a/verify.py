@@ -111,6 +111,7 @@ class Claim:
     original: str | None = None
     image_path: str | None = None
     claim_id: str = ""
+    source_run: str = ""
 
 
 @dataclass
@@ -209,6 +210,7 @@ def extract_claims(
                         # Computed from the same text that is stored, so the id and
                         # the claim can never disagree.
                         claim_id=claim_id(row.get("id"), turn, text),
+                        source_run=str(row.get("run_id") or ""),
                     )
                 )
                 question = None
@@ -329,6 +331,10 @@ def plant_errors(claims: list[Claim], seed: int = 0) -> list[Claim]:
                     referent=claim.referent,
                     planted=True,
                     original=claim.claim,
+                    # A planted claim is a different statement, so it gets its own
+                    # id; sharing the original's would collide in the verdict index.
+                    claim_id=claim_id(claim.image_id, claim.turn, perturbed),
+                    source_run=claim.source_run,
                 )
             )
     rng.shuffle(planted)
@@ -352,19 +358,22 @@ def judge_verdict(raw: str) -> tuple[str, str]:
     return verdict, evidence
 
 
+JUDGE_INSTRUCTION = (
+    "You are checking whether a claim about an image is true. "
+    "Look at the image and answer with one word on the first line: true, false, "
+    "or can't-tell. On the second line, give a short evidence note."
+)
+
+_ADVERSARIAL_SUFFIX = (
+    " Assume the claim may be deliberately wrong; check it carefully rather "
+    "than agreeing by default."
+)
+
+
 def build_verifier_prompt(claim: Claim, *, adversarial: bool = False) -> str:
     """The judging prompt. The adversarial variant is used for planted errors."""
 
-    instruction = (
-        "You are checking whether a claim about an image is true. "
-        "Look at the image and answer with one word on the first line: true, false, "
-        "or can't-tell. On the second line, give a short evidence note."
-    )
-    if adversarial:
-        instruction += (
-            " Assume the claim may be deliberately wrong; check it carefully rather "
-            "than agreeing by default."
-        )
+    instruction = JUDGE_INSTRUCTION + (_ADVERSARIAL_SUFFIX if adversarial else "")
     return f"{instruction}\n\nClaim: {claim.claim}\nQuestion it came from: {claim.question}"
 
 
@@ -470,7 +479,7 @@ def _verdict_key(claim: Claim, model: str) -> tuple:
 
 def _claim_from_row(row: dict[str, Any]) -> Claim:
     return Claim(
-        image_id=row.get("image_id"),
+        image_id=row.get("image_id", row.get("id")),
         turn=row.get("turn", 0),
         question=row.get("question", ""),
         answer=row.get("answer", ""),
@@ -479,7 +488,32 @@ def _claim_from_row(row: dict[str, Any]) -> Claim:
         planted=bool(row.get("planted")),
         original=row.get("original"),
         image_path=row.get("image_path"),
+        claim_id=row.get("claim_id", ""),
+        source_run=row.get("source_run", ""),
     )
+
+
+def claim_to_row(claim: Claim, *, source_run: str = "", extracted_at: str = "") -> dict[str, Any]:
+    """Write a claim row in exactly the spec's schema.
+
+    Verdict-shaped fields (``contradicted``, ``verdicts``) belong on verdict rows.
+    Putting them here would make a claim file ambiguous about which layer it is.
+    """
+
+    return {
+        "claim_id": claim.claim_id,
+        "image_id": claim.image_id,
+        "turn": claim.turn,
+        "question": claim.question,
+        "answer": claim.answer,
+        "claim": claim.claim,
+        "claim_type": claim.claim_type,
+        "image_path": claim.image_path,
+        "source_run": source_run,
+        "extracted_at": extracted_at,
+        "planted": claim.planted,
+        "original": claim.original,
+    }
 
 
 def _result_to_row(result: ClaimResult) -> dict[str, Any]:
@@ -531,11 +565,15 @@ def sample_claims(claims: list[Claim], n: int, seed: int = 0) -> list[Claim]:
 
 
 def judge_verdict_prompt_sha256() -> str:
-    """Pin the judging prompt, so a verdict names the question it answered."""
+    """Pin the judging instructions, so a verdict names the prompt it answered.
 
-    return hashlib.sha256(
-        build_verifier_prompt(Claim(0, 0, "", "", "claim", "existence")).encode()
-    ).hexdigest()[:16]
+    The claim text varies per row and is already stored on the claim, so hashing it
+    would make every verdict's hash different and useless for spotting a prompt
+    change. This hashes the instruction template: stable across claims, and changes
+    if the instructions change.
+    """
+
+    return hashlib.sha256(JUDGE_INSTRUCTION.encode()).hexdigest()[:16]
 
 
 def verdict_row(
@@ -721,7 +759,11 @@ def main() -> int:
         rows = read_jsonl(args.conversations)
         root = Path(__file__).resolve().parents[3]
         claims = extract_claims(rows, args.images_dir, root)
-        write_jsonl(args.out, [_result_to_row(ClaimResult(claim=c)) for c in claims])
+        stamp = now_iso()
+        write_jsonl(
+            args.out,
+            [claim_to_row(c, source_run=c.source_run, extracted_at=stamp) for c in claims],
+        )
         counts: dict[str, int] = {}
         for claim in claims:
             counts[claim.claim_type] = counts.get(claim.claim_type, 0) + 1
@@ -733,22 +775,10 @@ def main() -> int:
     if args.command == "plant":
         claims = [_claim_from_row(row) for row in read_jsonl(args.claims)]
         planted = plant_errors(claims, seed=args.seed)
+        stamp = now_iso()
         write_jsonl(
             args.out,
-            [
-                {
-                    "image_id": c.image_id,
-                    "turn": c.turn,
-                    "question": c.question,
-                    "answer": c.answer,
-                    "claim": c.claim,
-                    "claim_type": c.claim_type,
-                    "planted": True,
-                    "original": c.original,
-                    "image_path": c.image_path,
-                }
-                for c in planted
-            ],
+            [claim_to_row(c, source_run=c.source_run, extracted_at=stamp) for c in planted],
         )
         print(f"[plant] {len(planted)} planted errors -> {args.out}")
         return 0

@@ -243,8 +243,9 @@ def test_pilot_excludes_listed_ids(tmp_path):
 def test_unmeasurable_grounding_does_not_fail_the_run():
     """COCO has no expected answers; that is the instrument, not a bad annotator."""
 
-    from tools import m2a_annotator_pilot as pilot
     import inspect
+
+    from tools import m2a_annotator_pilot as pilot
 
     source = inspect.getsource(pilot.main)
     assert "grounding_skipped" in source
