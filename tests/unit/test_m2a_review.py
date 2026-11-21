@@ -75,3 +75,18 @@ def test_render_marks_a_planted_claim(tmp_path: Path):
     render(rows, out, tmp_path, "Test review")
 
     assert "tag-planted" in out.read_text()
+
+
+def test_cards_are_inside_main(tmp_path: Path):
+    """Cards appended after </main> lose the page padding and clip at the edge."""
+
+    rows = _verdict_rows([result(1, "Red (car)", ["true"])])
+    out = tmp_path / "review.html"
+
+    render(rows, out, tmp_path, "Test review")
+
+    html = out.read_text()
+    main_start = html.index("<main>")
+    main_end = html.index("</main>")
+    card_at = html.index('<article class="card"')
+    assert main_start < card_at < main_end

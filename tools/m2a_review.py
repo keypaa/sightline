@@ -174,12 +174,15 @@ def render(rows: list[dict[str, Any]], out: Path, images_dir: Path, title: str) 
         )
 
     template = (Path(__file__).parent / "m2a_review_template.html").read_text()
+    # The cards belong inside <main>, before its closing tag. Appending them after
+    # it would leave <main> empty: the page then has no content padding, and the
+    # cards render flush against the viewport edge.
     marker = "</main>"
     head, tail = template.split(marker, 1)
     out.write_text(
         head.replace("<title>M2a calibration review</title>", f"<title>{title}</title>")
-        + marker
         + "\n".join(cards)
+        + marker
         + tail,
         encoding="utf-8",
     )
