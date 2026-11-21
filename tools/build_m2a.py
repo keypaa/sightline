@@ -90,7 +90,7 @@ def cmd_fetch(args: argparse.Namespace) -> int:
             path = fetch(record, cache, _get)
             return {**record, "path": str(path), "sha256": content_hash(path)}, None
         except Exception as exc:
-            return record, f"fetch-failed: {type(exc).__name__}"
+            return record, f"fetch-failed: {type(exc).__name__}: {exc}"
 
     kept, dropped = [], []
     with ThreadPoolExecutor(max_workers=args.workers) as pool:
@@ -104,10 +104,21 @@ def cmd_fetch(args: argparse.Namespace) -> int:
                 print(f"[fetch] {done}/{total}", flush=True)
 
     hashes = {i: (r["sha256"], dhash(Path(r["path"]))) for i, r in enumerate(kept)}
-    keyed = [{**r, "id": i} for i, r in enumerate(kept)]
+    keyed = [{**r, "id": i, "order_seed": args.seed} for i, r in enumerate(kept)]
     deduped, dupes = dedupe(keyed, hashes)
+    if getattr(args, "write_checksums", False):
+        # Persist the observed hash so a later re-fetch can detect a changed file.
+        deduped = [{**r, "expected_sha256": r["sha256"]} for r in deduped]
     write_jsonl(args.root / "fetched.jsonl", deduped)
-    report("fetch", len(incoming), len(deduped), len(dropped) + len(dupes), duplicates=len(dupes))
+    write_jsonl(args.root / "fetch_dropped.jsonl", dropped)
+    report(
+        "fetch",
+        len(incoming),
+        len(deduped),
+        len(dropped) + len(dupes),
+        duplicates=len(dupes),
+        bad_images=len(dropped),
+    )
     return 0
 
 
@@ -203,6 +214,11 @@ def main() -> int:
     p.add_argument("--cache", default="artifacts/m2a_images")
     p.add_argument("--workers", type=int, default=1, help="concurrent downloads")
     p.add_argument("--limit", type=int, default=0, help="keep only N images, sampled with --seed")
+    p.add_argument(
+        "--write-checksums",
+        action="store_true",
+        help="write expected_sha256 into fetched.jsonl so a later re-fetch can verify it",
+    )
     p.set_defaults(func=cmd_fetch)
 
     p = sub.add_parser("annotate")

@@ -24,9 +24,24 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 
 _DHASH_SIDE = 8
+
+
+def sniff_image(path: Path) -> str | None:
+    """Return the Pillow format name, or None if the bytes are not a decodable image.
+
+    A 200 response is not proof of an image: CDNs and proxies hand back HTML error
+    pages with a 200 status. Asking the decoder what it actually recognised catches
+    those before they are hashed and recorded as if they were images.
+    """
+
+    try:
+        with Image.open(path) as image:
+            return image.format
+    except (UnidentifiedImageError, OSError):
+        return None
 
 
 def content_hash(path: Path) -> str:
@@ -60,13 +75,24 @@ def distance(a: int, b: int) -> int:
 
 
 def fetch(record: dict[str, Any], cache_dir: Path, get: Callable[[str], bytes]) -> Path:
-    """Download once into ``cache_dir`` and return the local path."""
+    """Download once into ``cache_dir``, verify the bytes, and return the path.
+
+    The format check and the optional checksum both exist to stop a re-fetch from
+    silently substituting different bytes: the first rejects an HTML page that
+    arrived with a 200, the second catches a changed or corrupted download when
+    the index knows what the file should hash to.
+    """
 
     cache_dir = Path(cache_dir)
     cache_dir.mkdir(parents=True, exist_ok=True)
     path = cache_dir / record["file_name"]
     if not path.exists():
         path.write_bytes(get(record["url"]))
+    if sniff_image(path) is None:
+        raise ValueError("not an image")
+    expected = record.get("expected_sha256")
+    if expected and expected != content_hash(path):
+        raise ValueError("checksum mismatch")
     return path
 
 
