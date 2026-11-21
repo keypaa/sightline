@@ -22,6 +22,7 @@ acquiesces to everything.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import random
 import re
@@ -30,7 +31,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from sightline.m2a.ids import claim_id
+from sightline.m2a.ids import claim_id, now_iso
 from sightline.m2a.transport import TransportError
 
 # Two verifier families, neither of which is the annotator (Qwen3.6-27B-FP8).
@@ -529,6 +530,32 @@ def sample_claims(claims: list[Claim], n: int, seed: int = 0) -> list[Claim]:
     return picked[:n]
 
 
+def judge_verdict_prompt_sha256() -> str:
+    """Pin the judging prompt, so a verdict names the question it answered."""
+
+    return hashlib.sha256(
+        build_verifier_prompt(Claim(0, 0, "", "", "claim", "existence")).encode()
+    ).hexdigest()[:16]
+
+
+def verdict_row(
+    claim: Claim, verdict: Verdict, *, prompt_sha256: str, judged_at: str
+) -> dict[str, Any]:
+    """One flat row: a single verifier's judgement of a single claim."""
+
+    return {
+        "claim_id": claim.claim_id,
+        "image_id": claim.image_id,
+        "turn": claim.turn,
+        "verifier_model": verdict.model,
+        "verifier_prompt_sha256": prompt_sha256,
+        "verdict": verdict.verdict,
+        "evidence": verdict.evidence,
+        "error": verdict.error,
+        "judged_at": judged_at,
+    }
+
+
 def judge_claims(
     claims: list[Claim],
     callers: list[Any],
@@ -537,6 +564,7 @@ def judge_claims(
     on_row: Any = None,
     workers: int = 1,
     max_consecutive_failures: int = 10,
+    on_verdict: Any = None,
 ) -> list[ClaimResult]:
     """Judge every claim with every caller, resuming from an existing results file.
 
@@ -550,40 +578,35 @@ def judge_claims(
 
     prior: dict[tuple, Verdict] = {}
     for row in existing or []:
-        for verdict in row.get("verdicts") or []:
-            if verdict.get("error"):
-                continue
-            key = (
-                row.get("image_id"),
-                row.get("turn"),
-                bool(row.get("planted")),
-                verdict.get("model"),
-            )
-            prior[key] = Verdict(
-                model=verdict.get("model", ""),
-                verdict=verdict.get("verdict", VERDICT_UNSURE),
-                evidence=verdict.get("evidence", ""),
-            )
+        if row.get("error"):
+            continue
+        key = (row.get("claim_id"), row.get("verifier_model"))
+        prior[key] = Verdict(
+            model=row.get("verifier_model", ""),
+            verdict=row.get("verdict", VERDICT_UNSURE),
+            evidence=row.get("evidence", ""),
+        )
 
     todo: list[tuple[Claim, list[Any]]] = []
     for claim in claims:
-        missing = [c for c in callers if _verdict_key(claim, c.model) not in prior]
+        missing = [c for c in callers if (claim.claim_id, c.model) not in prior]
         if missing:
             todo.append((claim, missing))
 
     def work(item: tuple[Claim, list[Any]]) -> ClaimResult:
         claim, pending_callers = item
         verdicts = [
-            prior[_verdict_key(claim, c.model)]
-            for c in callers
-            if _verdict_key(claim, c.model) in prior
+            prior[(claim.claim_id, c.model)] for c in callers if (claim.claim_id, c.model) in prior
         ]
         for caller in pending_callers:
             prompt = build_verifier_prompt(claim, adversarial=claim.planted)
             try:
                 image = Path(claim.image_path) if claim.image_path else None
                 verdict, evidence = judge_verdict(caller(image, prompt))
-                verdicts.append(Verdict(caller.model, verdict, evidence))
+                produced = Verdict(caller.model, verdict, evidence)
+                verdicts.append(produced)
+                if on_verdict is not None:
+                    on_verdict(claim, produced)
             except TransportError as exc:
                 # A failed judgement is not a "can't-tell" about the claim; it is a
                 # gap to retry, so it is marked as an error rather than a verdict.
@@ -748,9 +771,10 @@ def main() -> int:
         args.out.parent.mkdir(parents=True, exist_ok=True)
         lock = threading.Lock()
         written: list[dict[str, Any]] = []
+        prompt_sha256 = judge_verdict_prompt_sha256()
 
-        def on_row(result: ClaimResult) -> None:
-            row = _result_to_row(result)
+        def on_verdict(claim: Claim, verdict: Verdict) -> None:
+            row = verdict_row(claim, verdict, prompt_sha256=prompt_sha256, judged_at=now_iso())
             with lock:
                 with args.out.open("a", encoding="utf-8") as handle:
                     handle.write(json.dumps(row) + "\n")
@@ -760,7 +784,7 @@ def main() -> int:
             claims,
             callers,
             existing=existing,
-            on_row=on_row,
+            on_verdict=on_verdict,
             workers=args.workers,
         )
         summary = summarise(results)

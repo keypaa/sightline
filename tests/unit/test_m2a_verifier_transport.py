@@ -123,17 +123,21 @@ def test_judge_collects_a_verdict_from_every_caller():
 
 
 def test_judge_resumes_without_re_asking_a_recorded_model():
+    """Verdicts are flat now, so resume keys on (claim_id, verifier_model)."""
+
     callers = [Stub("v1", "true"), Stub("v2", "false")]
+    target = claim()
     existing = [
         {
-            "image_id": 0,
-            "turn": 1,
-            "planted": False,
-            "verdicts": [{"model": "v1", "verdict": "false", "evidence": "prior"}],
+            "claim_id": target.claim_id,
+            "verifier_model": "v1",
+            "verdict": "false",
+            "evidence": "prior",
+            "error": None,
         }
     ]
 
-    results = judge_claims([claim()], callers, existing=existing)
+    results = judge_claims([target], callers, existing=existing)
 
     assert callers[0].calls == 0
     assert callers[1].calls == 1

@@ -276,3 +276,73 @@ def test_a_missing_image_does_not_drop_the_claim(tmp_path: Path):
     claim = extract_claims(rows, images_dir=tmp_path)[0]
     assert claim.image_path is None
     assert claim.claim_id
+
+
+def test_verdict_row_is_flat():
+    from sightline.m2a.verify import Verdict, verdict_row
+
+    claim = Claim(
+        image_id=5,
+        turn=1,
+        question="q",
+        answer="Red.",
+        claim="Red (car)",
+        claim_type="colour",
+        claim_id="abc",
+    )
+    row = verdict_row(
+        claim,
+        Verdict("hy4", "true", "because"),
+        prompt_sha256="p",
+        judged_at="2026-11-21T00:00:00+00:00",
+    )
+    assert row["claim_id"] == "abc"
+    assert row["verifier_model"] == "hy4"
+    assert row["verdict"] == "true"
+    assert "verdicts" not in row
+
+
+def test_judge_resumes_from_flat_rows():
+    from sightline.m2a.verify import Verdict, judge_claims
+
+    class Stub:
+        def __init__(self, model, verdict):
+            self.model = model
+            self.verdict = verdict
+            self.calls = 0
+
+        def __call__(self, image, prompt):
+            self.calls += 1
+            return f"{self.verdict}\nbecause"
+
+    callers = [Stub("v1", "true"), Stub("v2", "false")]
+    existing = [
+        {
+            "claim_id": "abc",
+            "verifier_model": "v1",
+            "verdict": "false",
+            "evidence": "prior",
+            "error": None,
+        }
+    ]
+    claim = Claim(
+        image_id=0, turn=1, question="q", answer="a", claim="c", claim_type="colour", claim_id="abc"
+    )
+    judge_claims([claim], callers, existing=existing)
+    assert callers[0].calls == 0
+    assert callers[1].calls == 1
+
+
+def test_an_error_row_is_never_counted_as_cant_tell():
+    from sightline.m2a.verify import ClaimResult, Verdict, summarise
+
+    results = [
+        ClaimResult(
+            Claim(0, 1, "q", "a", "c", "colour", claim_id="x"),
+            verdicts=[Verdict("v1", "can't-tell", error="429")],
+        )
+    ]
+    summary = summarise(results)
+    assert summary["n_errored"] == 1
+    assert summary["n_judged"] == 0
+    assert summary["contradiction_rate"] is None
