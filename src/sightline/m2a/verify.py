@@ -495,12 +495,17 @@ def judge_claims(
     *,
     existing: list[dict[str, Any]] | None = None,
     on_row: Any = None,
+    workers: int = 1,
 ) -> list[ClaimResult]:
     """Judge every claim with every caller, resuming from an existing results file.
 
     A claim that already has a verdict from a given model is not re-asked, so a run
     interrupted by a rate limit can be restarted without spending the quota again.
+    Claims are judged in parallel; the two callers for one claim stay sequential so
+    the claim's own verdicts stay together.
     """
+
+    from concurrent.futures import ThreadPoolExecutor
 
     prior: dict[tuple, Verdict] = {}
     for row in existing or []:
@@ -519,14 +524,20 @@ def judge_claims(
                 evidence=verdict.get("evidence", ""),
             )
 
-    results: list[ClaimResult] = []
+    todo: list[tuple[Claim, list[Any]]] = []
     for claim in claims:
-        verdicts: list[Verdict] = []
-        for caller in callers:
-            key = _verdict_key(claim, caller.model)
-            if key in prior:
-                verdicts.append(prior[key])
-                continue
+        missing = [c for c in callers if _verdict_key(claim, c.model) not in prior]
+        if missing:
+            todo.append((claim, missing))
+
+    def work(item: tuple[Claim, list[Any]]) -> ClaimResult:
+        claim, pending_callers = item
+        verdicts = [
+            prior[_verdict_key(claim, c.model)]
+            for c in callers
+            if _verdict_key(claim, c.model) in prior
+        ]
+        for caller in pending_callers:
             prompt = build_verifier_prompt(claim, adversarial=claim.planted)
             try:
                 image = Path(claim.image_path) if claim.image_path else None
@@ -536,10 +547,22 @@ def judge_claims(
                 # A failed judgement is not a "can't-tell" about the claim; it is a
                 # gap to retry, so it is marked as an error rather than a verdict.
                 verdicts.append(Verdict(caller.model, VERDICT_UNSURE, evidence="", error=str(exc)))
-        result = ClaimResult(claim=claim, verdicts=verdicts)
-        results.append(result)
-        if on_row is not None:
-            on_row(result)
+        return ClaimResult(claim=claim, verdicts=verdicts)
+
+    results: list[ClaimResult] = []
+    if workers <= 1:
+        for item in todo:
+            result = work(item)
+            results.append(result)
+            if on_row is not None:
+                on_row(result)
+        return results
+
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        for result in pool.map(work, todo):
+            results.append(result)
+            if on_row is not None:
+                on_row(result)
     return results
 
 
@@ -597,6 +620,7 @@ def main() -> int:
     judge.add_argument("--models", nargs="+", default=list(VERIFIERS))
     judge.add_argument("--out", type=Path, default=Path("experiments/m2a_grounding/verdicts.jsonl"))
     judge.add_argument("--timeout", type=int, default=300)
+    judge.add_argument("--workers", type=int, default=1, help="claims judged concurrently")
 
     blind = sub.add_parser("blind", help="questions -> text-only answers")
     blind.add_argument(
@@ -671,7 +695,9 @@ def main() -> int:
                     handle.write(json.dumps(row) + "\n")
                 written.append(row)
 
-        results = judge_claims(claims, callers, existing=existing, on_row=on_row)
+        results = judge_claims(
+            claims, callers, existing=existing, on_row=on_row, workers=args.workers
+        )
         summary = summarise(results)
         print(json.dumps(summary, indent=2), flush=True)
         return 0
