@@ -120,18 +120,43 @@ measured afterwards by `sightline.m2a.verify`.
 
 ## 4. After the pilot: claim verification
 
-Runs on the laptop or the box, no GPU needed:
+Runs on the laptop (no GPU). It needs `pilot.jsonl` and the image cache; the images
+are already in `artifacts/m2a_images/`, so only the pilot output has to travel.
 
 ```bash
+# 1. conversations -> claims (one declarative claim per Q/A turn)
 PYTHONPATH=src python3 -m sightline.m2a.verify extract \
-  --conversations experiments/m2a_pilot/pilot.jsonl
+  --conversations experiments/m2a_pilot/pilot.jsonl \
+  --out experiments/m2a_grounding/claims.jsonl
 
+# 2. true claims -> planted errors, to measure verifier rejection
 PYTHONPATH=src python3 -m sightline.m2a.verify plant \
-  --claims experiments/m2a_grounding/claims.jsonl
+  --claims experiments/m2a_grounding/claims.jsonl \
+  --out experiments/m2a_grounding/planted.jsonl
+
+# 3. judge real and planted claims with both verifiers (resumable)
+PYTHONPATH=src python3 -m sightline.m2a.verify judge \
+  --claims experiments/m2a_grounding/claims.jsonl \
+  --planted experiments/m2a_grounding/planted.jsonl \
+  --out experiments/m2a_grounding/verdicts.jsonl
+
+# 4. blind reading: the question with no image, from a text-only model
+PYTHONPATH=src python3 -m sightline.m2a.verify blind \
+  --claims experiments/m2a_grounding/claims.jsonl \
+  --out experiments/m2a_grounding/blind.jsonl
+
+# 5. fold into one summary against the frozen thresholds
+PYTHONPATH=src python3 -m sightline.m2a.verify report \
+  --verdicts experiments/m2a_grounding/verdicts.jsonl \
+  --blind experiments/m2a_grounding/blind.jsonl \
+  --out experiments/m2a_grounding/summary.json
 ```
 
-Frozen thresholds (`DECISIONS/0049`): contradicted rate ≤ 0.15, planted-error
-rejection ≥ 0.90, human agreement ≥ 0.85.
+`judge` is resumable: a claim that already has a verdict from a model is not re-asked,
+so a quota interruption costs nothing on the restart.
+
+Frozen thresholds (`DECISIONS/0049`): contradicted rate ≤ 0.15 (upper bound of a 95%
+cluster bootstrap by image), planted-error rejection ≥ 0.90, human agreement ≥ 0.85.
 
 ## 5. Reproducing this later
 
