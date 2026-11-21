@@ -4,6 +4,8 @@ import hashlib
 import json
 from pathlib import Path
 
+import pytest
+
 from sightline.m2a.annotate import annotate_one, pending_records, prompt_hash
 
 
@@ -215,3 +217,77 @@ def test_cmd_annotate_uses_recorded_order_and_one_annotator(tmp_path: Path, monk
     call_models = [event[1] for event in seen if event[0] == "call"]
     assert init_models == [args.model]
     assert call_models == [args.model, args.model]
+
+
+@pytest.mark.parametrize(
+    "flag",
+    ["--revision", "--quantization", "--engine-version", "--chat-template-sha256"],
+)
+def test_annotate_requires_every_provenance_flag(
+    flag: str, tmp_path: Path, monkeypatch, capsys
+) -> None:
+    """An unpinned annotator row is worthless, so parse must fail without the flag."""
+
+    import sys
+
+    from tools import build_m2a
+
+    monkeypatch.setattr(build_m2a, "cmd_annotate", lambda args: 0)
+    complete = [
+        "--revision",
+        "abc123",
+        "--quantization",
+        "fp8",
+        "--engine-version",
+        "0.17.0",
+        "--chat-template-sha256",
+        "deadbeefdeadbeef",
+    ]
+    index = complete.index(flag)
+    argv = ["build_m2a.py", "--root", str(tmp_path), "annotate"]
+    argv += complete[:index] + complete[index + 2 :]
+    monkeypatch.setattr(sys, "argv", argv)
+
+    with pytest.raises(SystemExit) as excinfo:
+        build_m2a.main()
+
+    assert excinfo.value.code == 2
+    assert f"the following arguments are required: {flag}" in capsys.readouterr().err
+
+
+def test_annotate_accepts_a_fully_pinned_command(tmp_path: Path, monkeypatch) -> None:
+    import sys
+
+    from tools import build_m2a
+
+    captured = {}
+
+    def fake_cmd_annotate(args):
+        captured.update(vars(args))
+        return 0
+
+    monkeypatch.setattr(build_m2a, "cmd_annotate", fake_cmd_annotate)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "build_m2a.py",
+            "--root",
+            str(tmp_path),
+            "annotate",
+            "--revision",
+            "abc123",
+            "--quantization",
+            "fp8",
+            "--engine-version",
+            "0.17.0",
+            "--chat-template-sha256",
+            "deadbeefdeadbeef",
+        ],
+    )
+
+    assert build_m2a.main() == 0
+    assert captured["revision"] == "abc123"
+    assert captured["quantization"] == "fp8"
+    assert captured["engine_version"] == "0.17.0"
+    assert captured["chat_template_sha256"] == "deadbeefdeadbeef"

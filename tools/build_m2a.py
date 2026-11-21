@@ -7,7 +7,8 @@ one stage and any stage can be re-run alone.
     python tools/build_m2a.py index     --annotations instances_train2017.json
     python tools/build_m2a.py filter
     python tools/build_m2a.py fetch     --cache artifacts/m2a_images --write-checksums --seed 0
-    python tools/build_m2a.py annotate  --revision REV --quantization fp8 --engine-version VER
+    python tools/build_m2a.py annotate  --revision REV --quantization fp8 \
+        --engine-version VER --chat-template-sha256 HASH
     python tools/build_m2a.py manifest
 
 Every stage prints how many records came in, how many were kept and how many were
@@ -269,13 +270,25 @@ def main() -> int:
     p = sub.add_parser("annotate")
     p.add_argument("--model", default=DEFAULT_ANNOTATOR)
     p.add_argument("--base-url", default=DEFAULT_BASE_URL, help="vLLM chat endpoint")
-    p.add_argument("--revision", default="", help="pinned model revision; empty means unrecorded")
-    p.add_argument("--quantization", default="", help="e.g. fp8; empty means unrecorded")
-    p.add_argument("--engine-version", default="", help="vLLM version; empty means unrecorded")
+    p.add_argument(
+        "--revision",
+        required=True,
+        help="pinned commit sha of the served model weights (DECISIONS 0046)",
+    )
+    p.add_argument(
+        "--quantization",
+        required=True,
+        help="quantisation of the served weights, e.g. fp8; must be the real value",
+    )
+    p.add_argument(
+        "--engine-version",
+        required=True,
+        help="exact version of the vLLM engine serving the model",
+    )
     p.add_argument(
         "--chat-template-sha256",
-        default="",
-        help="hash of the template the server applies; empty means unrecorded",
+        required=True,
+        help="sha256 of the chat template the server applies, so generation is reproducible",
     )
     p.add_argument("--temperature", type=float, default=0.0)
     p.add_argument("--seed", type=int, default=0, help="annotator seed recorded on each row")
