@@ -24,7 +24,8 @@ import time
 from pathlib import Path
 from typing import Any
 
-from sightline.m2a.annotate import annotate_one, prompt_hash
+from sightline.m2a.annotate import annotate_one, annotate_row, prompt_hash
+from sightline.m2a.ids import new_run_id, now_iso
 from sightline.m2a.local_transport import LocalVLLM
 from sightline.m2a.prompt import answer_forms
 from sightline.m2a.provenance import annotator_fields
@@ -219,11 +220,13 @@ def main(argv: list[str] | None = None) -> int:
     args.out.mkdir(parents=True, exist_ok=True)
     started = time.perf_counter()
     rows: list[dict[str, Any]] = []
+    # Same identity rule as the corpus run, so pilot rows and corpus rows join.
+    run_id = new_run_id()
     with (args.out / "pilot.jsonl").open("w", encoding="utf-8") as handle:
         for record in picked:
             expected = record.get("expected")
             row = annotate_one(args.model, Path(record["path"]), call, annotator=annotator)
-            row["id"] = record.get("id")
+            row = annotate_row(record, row, run_id=run_id, created_at=now_iso())
             row["file_name"] = record.get("file_name")
             row["expected"] = expected
             row["grounded"] = (

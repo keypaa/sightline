@@ -49,6 +49,55 @@ def pending_records(
     return [row for row in fetched if row["id"] not in done]
 
 
+def annotate_row(
+    record: dict[str, Any], result: dict[str, Any], *, run_id: str, created_at: str
+) -> dict[str, Any]:
+    """Build the conversation row: the fetch record plus the annotator result.
+
+    ``path`` is dropped because it points into a local cache and means nothing on
+    another machine; ``sha256`` and ``image_sha256`` carry the identity instead.
+    """
+
+    row = {key: value for key, value in record.items() if key != "path"}
+    row.update(result)
+    row["run_id"] = run_id
+    row["created_at"] = created_at
+    return row
+
+
+_ANNOTATOR_KEYS = (
+    "model",
+    "revision",
+    "quantization",
+    "prompt_sha256",
+    "chat_template_sha256",
+)
+
+
+def check_single_annotator(existing: list[dict[str, Any]], row: dict[str, Any]) -> None:
+    """Refuse a row written by a different annotator than the corpus already has.
+
+    A corpus with two annotators cannot be compared to itself, and the difference
+    is invisible in a loss curve. Refusing at write time is cheaper than detecting
+    it in the manifest afterwards.
+    """
+
+    if not existing:
+        return
+    # A row with no annotator recorded predates this schema. It cannot be compared,
+    # so it is skipped rather than blocking the run; rows that do declare an
+    # annotator must all agree with each other.
+    declared = [row for row in existing if all(row.get(key) is not None for key in _ANNOTATOR_KEYS)]
+    if not declared:
+        return
+    first = declared[0]
+    for key in _ANNOTATOR_KEYS:
+        if row.get(key) != first.get(key):
+            raise ValueError(
+                f"annotator identity differs from the first row in this corpus ({key})"
+            )
+
+
 def annotate_one(
     model: str,
     image_path: Path,

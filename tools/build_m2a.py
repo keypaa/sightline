@@ -143,7 +143,14 @@ def _get(url: str) -> bytes:
 
 
 def cmd_annotate(args: argparse.Namespace) -> int:
-    from sightline.m2a.annotate import annotate_one, pending_records, prompt_hash
+    from sightline.m2a.annotate import (
+        annotate_one,
+        annotate_row,
+        check_single_annotator,
+        pending_records,
+        prompt_hash,
+    )
+    from sightline.m2a.ids import new_run_id, now_iso
     from sightline.m2a.local_transport import LocalVLLM
     from sightline.m2a.order import apply_order, read_order
     from sightline.m2a.provenance import annotator_fields
@@ -183,6 +190,8 @@ def cmd_annotate(args: argparse.Namespace) -> int:
     call = LocalVLLM(args.model, base_url=args.base_url, temperature=args.temperature)
 
     out = args.root / "conversations.jsonl"
+    # One identity per invocation, so every row from this run is attributable.
+    run_id = new_run_id()
     lock = threading.Lock()
     finished = 0
     unparsed = 0
@@ -190,13 +199,13 @@ def cmd_annotate(args: argparse.Namespace) -> int:
 
     def work(record):
         result = annotate_one(args.model, Path(record["path"]), call, annotator=annotator)
-        row = {k: v for k, v in record.items() if k != "path"}
-        row.update(result)
-        return row
+        return annotate_row(record, result, run_id=run_id, created_at=now_iso())
 
     def on_row(row):
         nonlocal finished, unparsed
         with lock:
+            # Reject a second annotator before the row lands, not in the manifest.
+            check_single_annotator(done_rows, row)
             with out.open("a", encoding="utf-8") as handle:
                 handle.write(json.dumps(row) + "\n")
             if not row["parsed"]:

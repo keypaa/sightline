@@ -291,3 +291,60 @@ def test_annotate_accepts_a_fully_pinned_command(tmp_path: Path, monkeypatch) ->
     assert captured["quantization"] == "fp8"
     assert captured["engine_version"] == "0.17.0"
     assert captured["chat_template_sha256"] == "deadbeefdeadbeef"
+
+
+def test_annotate_row_drops_path_and_adds_identity():
+    from sightline.m2a.annotate import annotate_row
+
+    row = annotate_row(
+        {"id": 7, "file_name": "a.jpg", "path": "/tmp/a.jpg"},
+        {"messages": [], "parsed": True, "model": "m", "image_sha256": "ab"},
+        run_id="run-1",
+        created_at="2026-11-21T00:00:00+00:00",
+    )
+    assert "path" not in row
+    assert row["run_id"] == "run-1"
+    assert row["created_at"].startswith("2026-11-21")
+    assert row["id"] == 7
+
+
+def test_check_single_annotator_allows_a_matching_row():
+    from sightline.m2a.annotate import check_single_annotator
+
+    existing = [
+        {
+            "model": "m",
+            "revision": "r",
+            "quantization": "fp8",
+            "prompt_sha256": "p",
+            "chat_template_sha256": "c",
+        }
+    ]
+    check_single_annotator(existing, dict(existing[0]))
+
+
+def test_check_single_annotator_refuses_a_different_model():
+    from sightline.m2a.annotate import check_single_annotator
+
+    existing = [
+        {
+            "model": "m",
+            "revision": "r",
+            "quantization": "fp8",
+            "prompt_sha256": "p",
+            "chat_template_sha256": "c",
+        }
+    ]
+    import pytest
+
+    with pytest.raises(ValueError, match="annotator"):
+        check_single_annotator(existing, {**existing[0], "model": "other"})
+
+
+def test_check_single_annotator_skips_rows_with_no_identity():
+    """A row that predates the schema cannot be compared, so it must not block."""
+
+    from sightline.m2a.annotate import check_single_annotator
+
+    existing = [{"id": 0, "parsed": True}]
+    check_single_annotator(existing, {"model": "m", "revision": "r"})
