@@ -165,6 +165,7 @@ def render(rows: list[dict[str, Any]], out: Path, images_dir: Path, title: str) 
     <p class="claim">{row["claim"]}</p>
     {_verdict_html(row["verdicts"])}
     <div class="decision">
+      <span class="prompt">Your call</span>
       <button class="agree" data-id="{image_id}" data-turn="{turn}">Verifiers right</button>
       <button class="wrong" data-id="{image_id}" data-turn="{turn}">Verifiers wrong</button>
     </div>
