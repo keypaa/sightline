@@ -89,9 +89,13 @@ def fetch(record: dict[str, Any], cache_dir: Path, get: Callable[[str], bytes]) 
     if not path.exists():
         path.write_bytes(get(record["url"]))
     if sniff_image(path) is None:
+        # A failed verification must not leave poisoned bytes behind: every later
+        # resume would see the file present, skip the download and fail the same way.
+        path.unlink(missing_ok=True)
         raise ValueError("not an image")
     expected = record.get("expected_sha256")
     if expected and expected != content_hash(path):
+        path.unlink(missing_ok=True)
         raise ValueError("checksum mismatch")
     return path
 

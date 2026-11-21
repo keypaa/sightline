@@ -145,6 +145,30 @@ def test_fetch_rejects_bytes_that_do_not_match_the_expected_hash(tmp_path: Path)
         fetch(record, tmp_path / "cache", lambda url: good.read_bytes())
 
 
+def test_fetch_evicts_non_image_bytes_from_the_cache(tmp_path: Path) -> None:
+    cache = tmp_path / "cache"
+    path = cache / "bad.jpg"
+    record = {"file_name": "bad.jpg", "url": "http://x/bad.jpg"}
+
+    with pytest.raises(ValueError, match="not an image"):
+        fetch(record, cache, lambda url: b"<html>404</html>")
+
+    assert not path.exists()
+
+
+def test_fetch_evicts_checksum_mismatch_bytes_from_the_cache(tmp_path: Path) -> None:
+    good = tmp_path / "good.jpg"
+    Image.new("RGB", (8, 8), "red").save(good)
+    cache = tmp_path / "cache"
+    path = cache / "good.jpg"
+    record = {"file_name": "good.jpg", "url": "http://x/good.jpg", "expected_sha256": "0" * 64}
+
+    with pytest.raises(ValueError, match="checksum mismatch"):
+        fetch(record, cache, lambda url: good.read_bytes())
+
+    assert not path.exists()
+
+
 def test_fetch_accepts_a_matching_checksum(tmp_path: Path) -> None:
     payload = image_bytes()
     record = {
