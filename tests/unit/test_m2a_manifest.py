@@ -148,3 +148,57 @@ def test_manifest_counts_colliding_ids_not_duplicate_pairs(tmp_path: Path) -> No
     result = manifest(path)
 
     assert result["n_cross_split_hash_collisions"] == 10
+
+
+def test_manifest_collision_count_follows_explicit_seed_not_order_seed(tmp_path: Path) -> None:
+    path = tmp_path / "conversations.jsonl"
+    rows = [
+        {
+            "id": i,
+            "parsed": True,
+            "order_seed": 7,
+            "sha256": "shared" if i in (0, 2) else f"h{i}",
+        }
+        for i in range(20)
+    ]
+    path.write_text("\n".join(json.dumps(r) for r in rows) + "\n")
+
+    # ids 0 and 2 share a hash: seed 0 puts both in train, seed 1 splits them.
+    parts = splits(usable_records(rows), seed=1)
+    locations = {row["id"]: name for name, part in parts.items() for row in part}
+    assert {locations[0], locations[2]} == {"train", "val"}
+
+    assert manifest(path)["n_cross_split_hash_collisions"] == 0
+    assert manifest(path, seed=1)["n_cross_split_hash_collisions"] == 2
+    assert manifest(path, seed=1)["order_seed"] == 7
+
+
+def test_cmd_manifest_collision_count_matches_written_splits(tmp_path: Path) -> None:
+    import argparse
+
+    from tools import build_m2a
+
+    root = tmp_path / "run"
+    root.mkdir()
+    rows = [
+        {
+            "id": i,
+            "parsed": True,
+            "order_seed": 7,
+            "sha256": "shared" if i in (0, 2) else f"h{i}",
+        }
+        for i in range(20)
+    ]
+    (root / "conversations.jsonl").write_text("\n".join(json.dumps(r) for r in rows) + "\n")
+
+    build_m2a.cmd_manifest(argparse.Namespace(root=root, seed=1))
+
+    result = json.loads((root / "manifest.json").read_text())
+    written = {
+        row["id"]
+        for name in ("train", "val", "test")
+        for row in build_m2a.read_jsonl(root / f"split_{name}.jsonl")
+    }
+    assert written == set(range(20))
+    assert result["n_cross_split_hash_collisions"] == 2
+    assert result["order_seed"] == 7

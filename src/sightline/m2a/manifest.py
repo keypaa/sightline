@@ -65,8 +65,18 @@ def _cross_split_hash_collisions(records: list[dict[str, Any]], seed: int) -> in
     )
 
 
-def manifest(path: Path, tokens_per_conversation: int = TOKENS_PER_CONVERSATION) -> dict[str, Any]:
-    """Describe a conversation file: size, provenance, coverage, and token budget."""
+def manifest(
+    path: Path,
+    tokens_per_conversation: int = TOKENS_PER_CONVERSATION,
+    *,
+    seed: int = 0,
+) -> dict[str, Any]:
+    """Describe a conversation file: size, provenance, coverage, and token budget.
+
+    ``seed`` is the split seed, so the collision count describes the same split
+    the caller writes. It is independent of the recorded ``order_seed``, which
+    is corpus-order provenance rather than a split parameter.
+    """
 
     rows = []
     with open(path, encoding="utf-8") as handle:
@@ -101,10 +111,6 @@ def manifest(path: Path, tokens_per_conversation: int = TOKENS_PER_CONVERSATION)
             order_seed = recorded
             break
 
-    # Collisions must describe the same split the build writes. build_m2a drives
-    # splits from --seed, which is the value it records as order_seed on each row.
-    split_seed = order_seed if order_seed is not None else 0
-
     result: dict[str, Any] = {
         "n_conversations": len(usable),
         "n_unparsed": len(rows) - len(usable),
@@ -114,7 +120,7 @@ def manifest(path: Path, tokens_per_conversation: int = TOKENS_PER_CONVERSATION)
         "source_count": len(sources),
         "annotators": dict(sorted(annotators.items())),
         "order_seed": order_seed,
-        "n_cross_split_hash_collisions": _cross_split_hash_collisions(usable, split_seed),
+        "n_cross_split_hash_collisions": _cross_split_hash_collisions(usable, seed),
         "tokens_per_conversation": tokens_per_conversation,
         "tokens_projected": len(usable) * tokens_per_conversation,
     }

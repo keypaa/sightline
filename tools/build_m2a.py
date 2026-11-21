@@ -229,7 +229,7 @@ def cmd_annotate(args: argparse.Namespace) -> int:
 
 def cmd_manifest(args: argparse.Namespace) -> int:
     rows = read_jsonl(args.root / "conversations.jsonl")
-    result = manifest(args.root / "conversations.jsonl")
+    result = manifest(args.root / "conversations.jsonl", seed=args.seed)
     for name, part in splits(usable_records(rows), seed=args.seed).items():
         write_jsonl(args.root / f"split_{name}.jsonl", part)
         result.setdefault("splits", {})[name] = len(part)
