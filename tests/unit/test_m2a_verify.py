@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
+from sightline.m2a.ids import claim_id
 from sightline.m2a.verify import (
     CLAIM_TYPES,
     CONTRADICTION_CEILING,
@@ -239,3 +242,37 @@ def test_colour_referent_is_unchanged_by_the_count_fix():
     from sightline.m2a.verify import make_declarative
 
     assert make_declarative("What color is the woman's skirt?", "Red.") == ("Red (woman's skirt)")
+
+
+def test_claim_id_is_set_and_stable_across_extracts():
+    rows = [
+        {
+            "id": 5,
+            "file_name": "a.jpg",
+            "messages": [
+                {"role": "user", "content": "What colour is the car?"},
+                {"role": "assistant", "content": "Red."},
+            ],
+        }
+    ]
+    first = extract_claims(rows)
+    second = extract_claims(rows)
+    assert first[0].claim_id
+    assert first[0].claim_id == second[0].claim_id
+    assert first[0].claim_id == claim_id(5, 1, "Red (car)")
+
+
+def test_a_missing_image_does_not_drop_the_claim(tmp_path: Path):
+    rows = [
+        {
+            "id": 5,
+            "file_name": "gone.jpg",
+            "messages": [
+                {"role": "user", "content": "What colour is the car?"},
+                {"role": "assistant", "content": "Red."},
+            ],
+        }
+    ]
+    claim = extract_claims(rows, images_dir=tmp_path)[0]
+    assert claim.image_path is None
+    assert claim.claim_id

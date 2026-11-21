@@ -30,6 +30,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from sightline.m2a.ids import claim_id
 from sightline.m2a.transport import TransportError
 
 # Two verifier families, neither of which is the annotator (Qwen3.6-27B-FP8).
@@ -108,6 +109,7 @@ class Claim:
     planted: bool = False
     original: str | None = None
     image_path: str | None = None
+    claim_id: str = ""
 
 
 @dataclass
@@ -193,15 +195,19 @@ def extract_claims(
                 question = content
             elif role == "assistant" and question and content:
                 turn += 1
+                text = make_declarative(question, content)
                 claims.append(
                     Claim(
                         image_id=row.get("id"),
                         turn=turn,
                         question=question,
                         answer=content,
-                        claim=make_declarative(question, content),
+                        claim=text,
                         claim_type=classify_claim(question, content),
                         image_path=resolve_image_path(row, images_dir, project_root),
+                        # Computed from the same text that is stored, so the id and
+                        # the claim can never disagree.
+                        claim_id=claim_id(row.get("id"), turn, text),
                     )
                 )
                 question = None
@@ -214,11 +220,15 @@ def resolve_image_path(
     """Find the image a conversation row refers to, without guessing silently."""
 
     path = row.get("path") or row.get("image_path")
-    if path:
+    if path and Path(path).exists():
         return str(path)
     name = row.get("file_name")
     if name and images_dir is not None:
-        return str(Path(images_dir) / name)
+        candidate = Path(images_dir) / name
+        if candidate.exists():
+            return str(candidate)
+    # An unresolved image is not an error: the claim stays usable, and the
+    # verifier reports it rather than the row vanishing.
     return None
 
 
