@@ -48,8 +48,25 @@ def usable_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [row for row in records if row.get("parsed") is not False]
 
 
+def _cross_split_hash_collisions(records: list[dict[str, Any]], seed: int) -> int:
+    """Count records whose hash lands in more than one split: a leakage signal."""
+
+    hash_to_splits: dict[str, set[str]] = {}
+    for name, part in splits(records, seed=seed).items():
+        for row in part:
+            digest = row.get("sha256")
+            if digest is not None:
+                hash_to_splits.setdefault(digest, set()).add(name)
+
+    return sum(
+        1
+        for row in records
+        if row.get("sha256") is not None and len(hash_to_splits[row["sha256"]]) > 1
+    )
+
+
 def manifest(path: Path, tokens_per_conversation: int = TOKENS_PER_CONVERSATION) -> dict[str, Any]:
-    """Describe a conversation file: size, provenance, and the token budget."""
+    """Describe a conversation file: size, provenance, coverage, and token budget."""
 
     rows = []
     with open(path, encoding="utf-8") as handle:
@@ -58,20 +75,49 @@ def manifest(path: Path, tokens_per_conversation: int = TOKENS_PER_CONVERSATION)
             if line:
                 rows.append(json.loads(line))
 
+    usable = usable_records(rows)
+
     licences: dict[str, int] = {}
     sources: dict[str, int] = {}
-    for row in usable_records(rows):
+    annotators: dict[str, int] = {}
+    categories: dict[str, int] = {}
+    for row in usable:
         name = row.get("license_name") or "missing"
         licences[name] = licences.get(name, 0) + 1
         source = row.get("source", "unknown")
         sources[source] = sources.get(source, 0) + 1
+        annotator = row.get("model") or "missing"
+        annotators[annotator] = annotators.get(annotator, 0) + 1
+        category = row.get("category")
+        if category is not None:
+            categories[category] = categories.get(category, 0) + 1
 
-    return {
-        "n_conversations": len(usable_records(rows)),
-        "n_unparsed": len(rows) - len(usable_records(rows)),
+    # The order seed is run-level provenance duplicated on each row; report the
+    # first recorded value rather than trusting a caller-supplied default.
+    order_seed: int | None = None
+    for row in rows:
+        recorded = row.get("order_seed")
+        if recorded is not None:
+            order_seed = recorded
+            break
+
+    # Collisions must describe the same split the build writes. build_m2a drives
+    # splits from --seed, which is the value it records as order_seed on each row.
+    split_seed = order_seed if order_seed is not None else 0
+
+    result: dict[str, Any] = {
+        "n_conversations": len(usable),
+        "n_unparsed": len(rows) - len(usable),
         "input_sha256": file_sha256(path),
         "licences": dict(sorted(licences.items())),
         "sources": dict(sorted(sources.items())),
+        "source_count": len(sources),
+        "annotators": dict(sorted(annotators.items())),
+        "order_seed": order_seed,
+        "n_cross_split_hash_collisions": _cross_split_hash_collisions(usable, split_seed),
         "tokens_per_conversation": tokens_per_conversation,
-        "tokens_projected": len(usable_records(rows)) * tokens_per_conversation,
+        "tokens_projected": len(usable) * tokens_per_conversation,
     }
+    if categories:
+        result["category_coverage"] = dict(sorted(categories.items()))
+    return result

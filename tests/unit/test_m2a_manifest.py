@@ -84,3 +84,67 @@ def test_usable_records_drops_only_explicit_failure() -> None:
     rows = [{"id": 0}, {"id": 1, "parsed": True}, {"id": 2, "parsed": False}]
 
     assert [r["id"] for r in usable_records(rows)] == [0, 1]
+
+
+def test_manifest_reports_sources_and_collisions(tmp_path: Path) -> None:
+    path = tmp_path / "conversations.jsonl"
+    rows = [
+        {
+            "id": 0,
+            "source": "coco",
+            "license_name": "CC BY 2.0",
+            "parsed": True,
+            "model": "Qwen/Qwen3.6-27B-FP8",
+            "sha256": "aa",
+        },
+        {
+            "id": 1,
+            "source": "coco",
+            "license_name": "CC BY 2.0",
+            "parsed": True,
+            "model": "Qwen/Qwen3.6-27B-FP8",
+            "sha256": "bb",
+        },
+    ]
+    path.write_text("\n".join(json.dumps(r) for r in rows) + "\n")
+
+    result = manifest(path)
+    assert result["source_count"] == 1
+    assert result["sources"] == {"coco": 2}
+    assert result["annotators"] == {"Qwen/Qwen3.6-27B-FP8": 2}
+    assert result["n_cross_split_hash_collisions"] == 0
+
+
+def test_manifest_records_order_seed_and_category_coverage(tmp_path: Path) -> None:
+    path = tmp_path / "conversations.jsonl"
+    rows = [
+        {"id": 0, "parsed": True, "order_seed": 7, "category": "counting", "sha256": "aa"},
+        {"id": 1, "parsed": True, "order_seed": 7, "category": "counting", "sha256": "bb"},
+        {"id": 2, "parsed": True, "order_seed": 7, "category": "spatial", "sha256": "cc"},
+    ]
+    path.write_text("\n".join(json.dumps(r) for r in rows) + "\n")
+
+    result = manifest(path)
+
+    assert result["order_seed"] == 7
+    assert result["category_coverage"] == {"counting": 2, "spatial": 1}
+
+
+def test_manifest_omits_category_coverage_when_unrecorded(tmp_path: Path) -> None:
+    path = tmp_path / "conversations.jsonl"
+    path.write_text(json.dumps({"id": 0, "source": "coco", "parsed": True}) + "\n")
+
+    result = manifest(path)
+
+    assert "category_coverage" not in result
+    assert result["order_seed"] is None
+
+
+def test_manifest_counts_colliding_ids_not_duplicate_pairs(tmp_path: Path) -> None:
+    path = tmp_path / "conversations.jsonl"
+    rows = [{"id": i, "parsed": True, "sha256": "shared"} for i in range(10)]
+    path.write_text("\n".join(json.dumps(r) for r in rows) + "\n")
+
+    result = manifest(path)
+
+    assert result["n_cross_split_hash_collisions"] == 10
