@@ -10,6 +10,7 @@ one stage and any stage can be re-run alone.
     python tools/build_m2a.py annotate  --revision REV --quantization fp8 \
         --engine-version VER --chat-template-sha256 HASH
     python tools/build_m2a.py manifest
+    python tools/build_m2a.py decontaminate --benchmark-manifest benchmarks.json
 
 Every stage prints how many records came in, how many were kept and how many were
 dropped, so a licence drop is a number rather than an absence.
@@ -18,12 +19,20 @@ dropped, so a licence drop is a number rather than an absence.
 from __future__ import annotations
 
 import argparse
+import importlib
 import json
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from sightline.m2a.coco_index import read_annotations
+from sightline.m2a.decontaminate import (
+    REQUIRED_BENCHMARKS,
+    SSCD_THRESHOLD,
+    find_contamination,
+    load_benchmark_hashes,
+    write_report,
+)
 from sightline.m2a.images import content_hash, dedupe, dhash, fetch
 from sightline.m2a.licence import classify
 from sightline.m2a.manifest import manifest, splits, usable_records
@@ -227,6 +236,64 @@ def cmd_annotate(args: argparse.Namespace) -> int:
     return 0
 
 
+def _load_sscd_callable(dotted: str):
+    """Import the owner-supplied SSCD scorer by dotted path."""
+
+    module_name, _, attribute = dotted.rpartition(".")
+    if not module_name or not attribute:
+        raise ValueError("--sscd-callable must be a dotted path, e.g. mypkg.sscd.score")
+    scorer = getattr(importlib.import_module(module_name), attribute)
+    if not callable(scorer):
+        raise ValueError(f"--sscd-callable {dotted} is not callable")
+    return scorer
+
+
+def _benchmark_images(directory: Path) -> dict[str, Path]:
+    """Index benchmark image files by their content hash for SSCD lookups."""
+
+    directory = Path(directory)
+    if not directory.is_dir():
+        raise ValueError(f"--benchmark-images-dir is not a directory: {directory}")
+    return {content_hash(path): path for path in directory.iterdir() if path.is_file()}
+
+
+def cmd_decontaminate(args: argparse.Namespace) -> int:
+    benchmark = load_benchmark_hashes(Path(args.benchmark_manifest))
+    missing = [name for name in REQUIRED_BENCHMARKS if name not in benchmark]
+    if missing:
+        raise ValueError(f"benchmark manifest is missing required benchmarks: {missing}")
+
+    sscd_similarity = _load_sscd_callable(args.sscd_callable) if args.sscd_callable else None
+    if args.similarity and sscd_similarity is None:
+        raise ValueError("--similarity requires --sscd-callable")
+
+    benchmark_images = (
+        _benchmark_images(args.benchmark_images_dir) if args.benchmark_images_dir else None
+    )
+    if sscd_similarity is not None and benchmark_images is None:
+        raise ValueError("similarity requires --benchmark-images-dir")
+
+    # fetched.jsonl carries both sha256 and path; conversations.jsonl drops path
+    # during annotation, so it cannot support the similarity layer.
+    records = read_jsonl(args.root / "fetched.jsonl")
+    rows = find_contamination(
+        records,
+        benchmark,
+        sscd_similarity=sscd_similarity,
+        benchmark_images=benchmark_images,
+        threshold=args.sscd_threshold,
+    )
+    summary = write_report(
+        args.root / "decontamination.jsonl",
+        rows,
+        len(records),
+        checked_benchmarks=sorted(benchmark),
+    )
+    (args.root / "decontamination_report.json").write_text(json.dumps(summary, indent=2))
+    print(json.dumps(summary, indent=2))
+    return 0
+
+
 def cmd_manifest(args: argparse.Namespace) -> int:
     rows = read_jsonl(args.root / "conversations.jsonl")
     result = manifest(args.root / "conversations.jsonl", seed=args.seed)
@@ -318,7 +385,38 @@ def main() -> int:
     p.add_argument("--seed", type=int, default=0)
     p.set_defaults(func=cmd_manifest)
 
+    p = sub.add_parser("decontaminate")
+    p.add_argument(
+        "--benchmark-manifest",
+        required=True,
+        help="JSON or JSONL mapping benchmark name to a list of image sha256 values",
+    )
+    p.add_argument(
+        "--similarity",
+        action="store_true",
+        help="enable SSCD similarity; requires --sscd-callable and --benchmark-images-dir",
+    )
+    p.add_argument(
+        "--sscd-callable",
+        help="dotted import path to a Callable[[Path, Path], float] SSCD scorer",
+    )
+    p.add_argument(
+        "--benchmark-images-dir",
+        type=Path,
+        help="directory of benchmark images, identified by their content sha256",
+    )
+    p.add_argument(
+        "--sscd-threshold",
+        type=float,
+        default=SSCD_THRESHOLD,
+        help=f"SSCD cosine threshold (DECISIONS 0046: {SSCD_THRESHOLD})",
+    )
+    p.set_defaults(func=cmd_decontaminate)
+
     args = parser.parse_args()
+    if args.command == "decontaminate" and args.similarity and not args.sscd_callable:
+        # Refuse to silently degrade a requested similarity run to exact-only.
+        parser.error("decontaminate --similarity requires --sscd-callable")
     args.seed = getattr(args, "seed", 0)
     return args.func(args)
 
