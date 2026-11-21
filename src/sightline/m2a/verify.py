@@ -635,16 +635,21 @@ def judge_claims(
     return results
 
 
-def judge_blind(claims: list[Claim], call: Any, *, on_row: Any = None) -> list[dict[str, Any]]:
+def judge_blind(
+    claims: list[Claim], call: Any, *, model: str, on_row: Any = None
+) -> list[dict[str, Any]]:
     """Ask a text-only model each question, with no image, and compare."""
 
     rows: list[dict[str, Any]] = []
     for claim in claims:
         row: dict[str, Any] = {
+            "claim_id": claim.claim_id,
             "image_id": claim.image_id,
             "turn": claim.turn,
             "question": claim.question,
             "expected": claim.answer,
+            "blind_model": model,
+            "judged_at": now_iso(),
         }
         try:
             response = call(
@@ -803,7 +808,7 @@ def main() -> int:
                 handle.flush()
                 rows.append(row)
 
-            judge_blind(claims, caller, on_row=on_row)
+            judge_blind(claims, caller, model=args.model, on_row=on_row)
         summary = summarise_blind(rows)
         print(json.dumps(summary, indent=2), flush=True)
         return 0

@@ -178,7 +178,7 @@ def test_judge_blind_asks_without_an_image_and_records_the_answer():
             seen["prompt"] = prompt
             return "Red."
 
-    rows = judge_blind([claim()], Blind())
+    rows = judge_blind([claim()], Blind(), model="hy4")
 
     assert seen["image"] is None
     assert len(rows) == 1
@@ -191,8 +191,18 @@ def test_judge_blind_marks_a_failed_call_instead_of_guessing():
         def __call__(self, image, prompt):
             raise TransportError("no quota")
 
-    rows = judge_blind([claim()], Boom())
+    rows = judge_blind([claim()], Boom(), model="hy4")
 
     assert rows[0]["blind_answer"] is None
     assert rows[0]["blind_matches"] is False
     assert "no quota" in rows[0]["error"]
+
+
+def test_blind_row_carries_the_claim_id_and_model():
+    claim_row = Claim(0, 1, "What colour?", "Red.", "Red (car)", "colour", claim_id="abc")
+
+    rows = judge_blind([claim_row], Stub("v", "true"), model="hy4")
+
+    assert rows[0]["claim_id"] == "abc"
+    assert rows[0]["blind_model"] == "hy4"
+    assert rows[0]["judged_at"]
