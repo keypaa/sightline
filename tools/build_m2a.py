@@ -6,8 +6,8 @@ one stage and any stage can be re-run alone.
 
     python tools/build_m2a.py index     --annotations instances_train2017.json
     python tools/build_m2a.py filter
-    python tools/build_m2a.py fetch     --cache artifacts/m2a_images
-    python tools/build_m2a.py annotate  --model kilo/nvidia/nemotron-3.5-super-vl:free
+    python tools/build_m2a.py fetch     --cache artifacts/m2a_images --write-checksums --seed 0
+    python tools/build_m2a.py annotate  --revision REV --quantization fp8 --engine-version VER
     python tools/build_m2a.py manifest
 
 Every stage prints how many records came in, how many were kept and how many were
@@ -30,7 +30,9 @@ from sightline.m2a.sample import sample_subset
 
 COCO_IMAGE_URL = "http://images.cocodataset.org/train2017/"
 DEFAULT_ROOT = Path("experiments/m2a_build")
-DEFAULT_ANNOTATOR = "kilo/nvidia/nemotron-3.5-super-vl:free"
+DEFAULT_ANNOTATOR = "Qwen/Qwen3.6-27B-FP8"
+DEFAULT_BASE_URL = "http://localhost:8000/v1"
+ANNOTATE_ENGINE = "vllm"
 
 
 def read_jsonl(path: Path) -> list[dict]:
@@ -131,21 +133,53 @@ def _get(url: str) -> bytes:
 
 
 def cmd_annotate(args: argparse.Namespace) -> int:
-    from sightline.m2a.annotate import annotate_one, pending_records
-    from sightline.m2a.transport import cli_call, retry_loop
+    from sightline.m2a.annotate import annotate_one, pending_records, prompt_hash
+    from sightline.m2a.local_transport import LocalVLLM
+    from sightline.m2a.order import apply_order, read_order
+    from sightline.m2a.provenance import annotator_fields
+    from sightline.m2a.transport import retry_loop
 
     incoming = read_jsonl(args.root / "fetched.jsonl")
+    order_path = args.root / "order.jsonl"
+    if order_path.exists():
+        # Resume must follow the recorded corpus order, not the order rows happened
+        # to be completed in; filter pending only after applying it.
+        incoming = apply_order(incoming, read_order(order_path))
+
     done_rows = read_jsonl(args.root / "conversations.jsonl")
     pending_all = pending_records(incoming, done_rows)
     pending = pending_all[: args.limit] if args.limit else pending_all
+
+    # fetch pins order_seed on each kept row. Read it back rather than assuming the
+    # annotate run used the same seed that generated order.jsonl.
+    order_seed = incoming[0].get("order_seed", args.seed) if incoming else args.seed
+
+    # Built once: every row in this run carries the same annotator identity, and the
+    # record cannot shadow it when the result is merged in.
+    annotator = annotator_fields(
+        model=args.model,
+        revision=args.revision,
+        quantization=args.quantization,
+        engine=ANNOTATE_ENGINE,
+        engine_version=args.engine_version,
+        prompt_sha256=prompt_hash(),
+        chat_template_sha256=args.chat_template_sha256,
+        seed=args.seed,
+        order_seed=order_seed,
+        temperature=args.temperature,
+    )
+    # The call-time model wins in LocalVLLM, so pass the same string annotate_one
+    # records; the POST payload and the row provenance cannot disagree.
+    call = LocalVLLM(args.model, base_url=args.base_url, temperature=args.temperature)
 
     out = args.root / "conversations.jsonl"
     lock = threading.Lock()
     finished = 0
     unparsed = 0
+    failures: list[dict] = []
 
     def work(record):
-        result = annotate_one(args.model, Path(record["path"]), cli_call)
+        result = annotate_one(args.model, Path(record["path"]), call, annotator=annotator)
         row = {k: v for k, v in record.items() if k != "path"}
         row.update(result)
         return row
@@ -155,6 +189,10 @@ def cmd_annotate(args: argparse.Namespace) -> int:
         with lock:
             with out.open("a", encoding="utf-8") as handle:
                 handle.write(json.dumps(row) + "\n")
+            if not row["parsed"]:
+                # Unparsed rows stay in conversations.jsonl so resume retries them;
+                # this file is the per-run audit of what came back unusable.
+                failures.append(row)
             finished += 1
             unparsed += int(not row["parsed"])
             if finished % 50 == 0:
@@ -169,6 +207,7 @@ def cmd_annotate(args: argparse.Namespace) -> int:
         wait_seconds=args.wait_seconds,
         max_waits=args.max_waits,
     )
+    write_jsonl(args.root / "annotate_failures.jsonl", failures)
 
     report(
         "annotate",
@@ -229,7 +268,18 @@ def main() -> int:
 
     p = sub.add_parser("annotate")
     p.add_argument("--model", default=DEFAULT_ANNOTATOR)
-    p.add_argument("--workers", type=int, default=1, help="concurrent opencode calls")
+    p.add_argument("--base-url", default=DEFAULT_BASE_URL, help="vLLM chat endpoint")
+    p.add_argument("--revision", default="", help="pinned model revision; empty means unrecorded")
+    p.add_argument("--quantization", default="", help="e.g. fp8; empty means unrecorded")
+    p.add_argument("--engine-version", default="", help="vLLM version; empty means unrecorded")
+    p.add_argument(
+        "--chat-template-sha256",
+        default="",
+        help="hash of the template the server applies; empty means unrecorded",
+    )
+    p.add_argument("--temperature", type=float, default=0.0)
+    p.add_argument("--seed", type=int, default=0, help="annotator seed recorded on each row")
+    p.add_argument("--workers", type=int, default=1, help="concurrent annotation calls")
     p.add_argument("--limit", type=int, default=0, help="annotate at most N pending images")
     p.add_argument(
         "--empty-limit",
