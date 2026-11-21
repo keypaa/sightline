@@ -197,3 +197,40 @@ def test_cmd_fetch_records_order_seed_and_drops_bad_images(
     assert fetched[0]["expected_sha256"] == hashlib.sha256(payload).hexdigest()
     assert [row["id"] for row in dropped] == [2]
     assert "not an image" in dropped[0]["drop_reason"]
+
+
+def test_fetch_subparser_seed_reaches_the_recorded_order(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import sys
+
+    from tools import build_m2a
+
+    root = tmp_path / "build"
+    payload = image_bytes()
+    build_m2a.write_jsonl(
+        root / "filtered.jsonl",
+        [{"id": 1, "file_name": "a.jpg", "url": "http://x/a.jpg"}],
+    )
+    monkeypatch.setattr(build_m2a, "_get", lambda url: payload)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "build_m2a.py",
+            "--root",
+            str(root),
+            "fetch",
+            "--cache",
+            str(tmp_path / "cache"),
+            "--seed",
+            "7",
+        ],
+    )
+
+    # main() is the only place the subparser's value is resolved via getattr, so
+    # going through it proves both that --seed is exposed and that it is not lost.
+    assert build_m2a.main() == 0
+
+    fetched = build_m2a.read_jsonl(root / "fetched.jsonl")
+    assert fetched[0]["order_seed"] == 7

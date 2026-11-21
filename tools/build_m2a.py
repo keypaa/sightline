@@ -215,6 +215,12 @@ def main() -> int:
     p.add_argument("--workers", type=int, default=1, help="concurrent downloads")
     p.add_argument("--limit", type=int, default=0, help="keep only N images, sampled with --seed")
     p.add_argument(
+        "--seed",
+        type=int,
+        default=0,
+        help="seed for both the --limit sample and the recorded order_seed",
+    )
+    p.add_argument(
         "--write-checksums",
         action="store_true",
         help="write expected_sha256 into fetched.jsonl so a later re-fetch can verify it",
