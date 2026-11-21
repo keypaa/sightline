@@ -25,9 +25,12 @@ import argparse
 import json
 import random
 import re
+import threading
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
+from sightline.m2a.transport import TransportError
 
 # Two verifier families, neither of which is the annotator (Qwen3.6-27B-FP8).
 VERIFIERS = ("opencode/hy4-flash-free", "kilo/particle-ai/particle-1:free")
@@ -104,6 +107,7 @@ class Claim:
     referent: str | None = None
     planted: bool = False
     original: str | None = None
+    image_path: str | None = None
 
 
 @dataclass
@@ -166,7 +170,11 @@ def classify_claim(question: str, answer: str) -> str:
     return "existence"
 
 
-def extract_claims(rows: list[dict[str, Any]]) -> list[Claim]:
+def extract_claims(
+    rows: list[dict[str, Any]],
+    images_dir: Path | None = None,
+    project_root: Path | None = None,
+) -> list[Claim]:
     """One claim per Q/A turn, with the referent named explicitly.
 
     A turn whose assistant message does not state an answer is skipped and counted
@@ -193,10 +201,25 @@ def extract_claims(rows: list[dict[str, Any]]) -> list[Claim]:
                         answer=content,
                         claim=make_declarative(question, content),
                         claim_type=classify_claim(question, content),
+                        image_path=resolve_image_path(row, images_dir, project_root),
                     )
                 )
                 question = None
     return claims
+
+
+def resolve_image_path(
+    row: dict[str, Any], images_dir: Path | None, project_root: Path | None
+) -> str | None:
+    """Find the image a conversation row refers to, without guessing silently."""
+
+    path = row.get("path") or row.get("image_path")
+    if path:
+        return str(path)
+    name = row.get("file_name")
+    if name and images_dir is not None:
+        return str(Path(images_dir) / name)
+    return None
 
 
 def make_declarative(question: str, answer: str) -> str:
@@ -377,12 +400,151 @@ def summarise_blind(rows: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def normalise_tokens(text: str) -> set[str]:
+    return set(re.sub(r"[^a-z0-9 ]", " ", str(text).lower()).split())
+
+
+def blind_matches(expected: str, response: str) -> bool:
+    """True when the expected answer's words all appear in the blind response."""
+
+    want = normalise_tokens(expected)
+    if not want:
+        return False
+    return want.issubset(normalise_tokens(response))
+
+
+def _verdict_key(claim: Claim, model: str) -> tuple:
+    return (claim.image_id, claim.turn, bool(claim.planted), model)
+
+
+def _claim_from_row(row: dict[str, Any]) -> Claim:
+    return Claim(
+        image_id=row.get("image_id"),
+        turn=row.get("turn", 0),
+        question=row.get("question", ""),
+        answer=row.get("answer", ""),
+        claim=row.get("claim", ""),
+        claim_type=row.get("claim_type", "existence"),
+        planted=bool(row.get("planted")),
+        original=row.get("original"),
+        image_path=row.get("image_path"),
+    )
+
+
+def _result_to_row(result: ClaimResult) -> dict[str, Any]:
+    return {
+        "image_id": result.claim.image_id,
+        "turn": result.claim.turn,
+        "question": result.claim.question,
+        "answer": result.claim.answer,
+        "claim": result.claim.claim,
+        "claim_type": result.claim.claim_type,
+        "planted": result.claim.planted,
+        "image_path": result.claim.image_path,
+        "contradicted": result.contradicted,
+        "verdicts": [
+            {
+                "model": v.model,
+                "verdict": v.verdict,
+                "evidence": v.evidence,
+                "error": v.error,
+            }
+            for v in result.verdicts
+        ],
+    }
+
+
+def judge_claims(
+    claims: list[Claim],
+    callers: list[Any],
+    *,
+    existing: list[dict[str, Any]] | None = None,
+    on_row: Any = None,
+) -> list[ClaimResult]:
+    """Judge every claim with every caller, resuming from an existing results file.
+
+    A claim that already has a verdict from a given model is not re-asked, so a run
+    interrupted by a rate limit can be restarted without spending the quota again.
+    """
+
+    prior: dict[tuple, Verdict] = {}
+    for row in existing or []:
+        for verdict in row.get("verdicts") or []:
+            if verdict.get("error"):
+                continue
+            key = (
+                row.get("image_id"),
+                row.get("turn"),
+                bool(row.get("planted")),
+                verdict.get("model"),
+            )
+            prior[key] = Verdict(
+                model=verdict.get("model", ""),
+                verdict=verdict.get("verdict", VERDICT_UNSURE),
+                evidence=verdict.get("evidence", ""),
+            )
+
+    results: list[ClaimResult] = []
+    for claim in claims:
+        verdicts: list[Verdict] = []
+        for caller in callers:
+            key = _verdict_key(claim, caller.model)
+            if key in prior:
+                verdicts.append(prior[key])
+                continue
+            prompt = build_verifier_prompt(claim, adversarial=claim.planted)
+            try:
+                image = Path(claim.image_path) if claim.image_path else None
+                verdict, evidence = judge_verdict(caller(image, prompt))
+                verdicts.append(Verdict(caller.model, verdict, evidence))
+            except TransportError as exc:
+                # A failed judgement is not a "can't-tell" about the claim; it is a
+                # gap to retry, so it is marked as an error rather than a verdict.
+                verdicts.append(Verdict(caller.model, VERDICT_UNSURE, evidence="", error=str(exc)))
+        result = ClaimResult(claim=claim, verdicts=verdicts)
+        results.append(result)
+        if on_row is not None:
+            on_row(result)
+    return results
+
+
+def judge_blind(claims: list[Claim], call: Any, *, on_row: Any = None) -> list[dict[str, Any]]:
+    """Ask a text-only model each question, with no image, and compare."""
+
+    rows: list[dict[str, Any]] = []
+    for claim in claims:
+        row: dict[str, Any] = {
+            "image_id": claim.image_id,
+            "turn": claim.turn,
+            "question": claim.question,
+            "expected": claim.answer,
+        }
+        try:
+            response = call(
+                None,
+                "Answer the question in one short phrase.\n\nQuestion: " + claim.question,
+            )
+            row["blind_answer"] = response
+            row["blind_matches"] = blind_matches(claim.answer, response)
+        except TransportError as exc:
+            row["blind_answer"] = None
+            row["blind_matches"] = False
+            row["error"] = str(exc)
+        rows.append(row)
+        if on_row is not None:
+            on_row(row)
+    return rows
+
+
 def main() -> int:
+    from sightline.m2a.verifier_transport import OpencodeCaller
+
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
 
     extract = sub.add_parser("extract", help="conversation rows -> claims")
     extract.add_argument("--conversations", type=Path, required=True)
+    extract.add_argument("--images-dir", type=Path, default=Path("artifacts/m2a_images"))
     extract.add_argument("--out", type=Path, default=Path("experiments/m2a_grounding/claims.jsonl"))
 
     plant = sub.add_parser("plant", help="claims -> planted-error variants")
@@ -392,12 +554,50 @@ def main() -> int:
     plant.add_argument("--out", type=Path, default=Path("experiments/m2a_grounding/planted.jsonl"))
     plant.add_argument("--seed", type=int, default=0)
 
+    judge = sub.add_parser("judge", help="claims -> verifier verdicts")
+    judge.add_argument(
+        "--claims", type=Path, default=Path("experiments/m2a_grounding/claims.jsonl")
+    )
+    judge.add_argument("--planted", type=Path, default=None)
+    judge.add_argument("--models", nargs="+", default=list(VERIFIERS))
+    judge.add_argument("--out", type=Path, default=Path("experiments/m2a_grounding/verdicts.jsonl"))
+    judge.add_argument("--timeout", type=int, default=300)
+
+    blind = sub.add_parser("blind", help="questions -> text-only answers")
+    blind.add_argument(
+        "--claims", type=Path, default=Path("experiments/m2a_grounding/claims.jsonl")
+    )
+    blind.add_argument("--model", default=BLIND_MODEL)
+    blind.add_argument("--out", type=Path, default=Path("experiments/m2a_grounding/blind.jsonl"))
+
+    report = sub.add_parser("report", help="fold verdicts and blind rows into a summary")
+    report.add_argument(
+        "--verdicts",
+        type=Path,
+        default=Path("experiments/m2a_grounding/verdicts.jsonl"),
+    )
+    report.add_argument("--blind", type=Path, default=Path("experiments/m2a_grounding/blind.jsonl"))
+    report.add_argument("--out", type=Path, default=Path("experiments/m2a_grounding/summary.json"))
+
     args = parser.parse_args()
     args.seed = getattr(args, "seed", 0)
 
     if args.command == "extract":
         rows = read_jsonl(args.conversations)
-        claims = extract_claims(rows)
+        root = Path(__file__).resolve().parents[3]
+        claims = extract_claims(rows, args.images_dir, root)
+        write_jsonl(args.out, [_result_to_row(ClaimResult(claim=c)) for c in claims])
+        counts: dict[str, int] = {}
+        for claim in claims:
+            counts[claim.claim_type] = counts.get(claim.claim_type, 0) + 1
+        print(f"[extract] {len(claims)} claims from {len(rows)} conversations")
+        print(f"[extract] by type: {dict(sorted(counts.items()))}")
+        print(f"[extract] -> {args.out}")
+        return 0
+
+    if args.command == "plant":
+        claims = [_claim_from_row(row) for row in read_jsonl(args.claims)]
+        planted = plant_errors(claims, seed=args.seed)
         write_jsonl(
             args.out,
             [
@@ -408,51 +608,94 @@ def main() -> int:
                     "answer": c.answer,
                     "claim": c.claim,
                     "claim_type": c.claim_type,
-                    "planted": False,
+                    "planted": True,
+                    "original": c.original,
+                    "image_path": c.image_path,
                 }
-                for c in claims
+                for c in planted
             ],
         )
-        counts: dict[str, int] = {}
-        for claim in claims:
-            counts[claim.claim_type] = counts.get(claim.claim_type, 0) + 1
-        print(f"[extract] {len(claims)} claims from {len(rows)} conversations")
-        print(f"[extract] by type: {dict(sorted(counts.items()))}")
-        print(f"[extract] -> {args.out}")
+        print(f"[plant] {len(planted)} planted errors -> {args.out}")
         return 0
 
-    claims = [
-        Claim(
-            image_id=row.get("image_id"),
-            turn=row.get("turn", 0),
-            question=row.get("question", ""),
-            answer=row.get("answer", ""),
-            claim=row.get("claim", ""),
-            claim_type=row.get("claim_type", "existence"),
-            planted=bool(row.get("planted")),
-            original=row.get("original"),
+    if args.command == "judge":
+        claims = [_claim_from_row(row) for row in read_jsonl(args.claims)]
+        if args.planted:
+            claims += [_claim_from_row(row) for row in read_jsonl(args.planted)]
+        callers = [OpencodeCaller(model, timeout=args.timeout) for model in args.models]
+        existing = read_jsonl(args.out)
+
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        lock = threading.Lock()
+        written: list[dict[str, Any]] = []
+
+        def on_row(result: ClaimResult) -> None:
+            row = _result_to_row(result)
+            with lock:
+                with args.out.open("a", encoding="utf-8") as handle:
+                    handle.write(json.dumps(row) + "\n")
+                written.append(row)
+
+        results = judge_claims(claims, callers, existing=existing, on_row=on_row)
+        summary = summarise(results)
+        print(json.dumps(summary, indent=2), flush=True)
+        return 0
+
+    if args.command == "blind":
+        claims = [_claim_from_row(row) for row in read_jsonl(args.claims)]
+        caller = OpencodeCaller(args.model)
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        rows: list[dict[str, Any]] = []
+        with args.out.open("w", encoding="utf-8") as handle:
+
+            def on_row(row: dict[str, Any]) -> None:
+                handle.write(json.dumps(row) + "\n")
+                handle.flush()
+                rows.append(row)
+
+            judge_blind(claims, caller, on_row=on_row)
+        summary = summarise_blind(rows)
+        print(json.dumps(summary, indent=2), flush=True)
+        return 0
+
+    verdict_rows = read_jsonl(args.verdicts)
+    results = [
+        ClaimResult(
+            claim=_claim_from_row(row),
+            verdicts=[
+                Verdict(
+                    model=v.get("model", ""),
+                    verdict=v.get("verdict", VERDICT_UNSURE),
+                    evidence=v.get("evidence", ""),
+                    error=v.get("error"),
+                )
+                for v in row.get("verdicts") or []
+            ],
         )
-        for row in read_jsonl(args.claims)
+        for row in verdict_rows
     ]
-    planted = plant_errors(claims, seed=args.seed)
-    write_jsonl(
-        args.out,
-        [
-            {
-                "image_id": c.image_id,
-                "turn": c.turn,
-                "question": c.question,
-                "answer": c.answer,
-                "claim": c.claim,
-                "claim_type": c.claim_type,
-                "planted": True,
-                "original": c.original,
-            }
-            for c in planted
-        ],
+    real = [r for r in results if not r.claim.planted]
+    planted = [r for r in results if r.claim.planted]
+
+    summary = summarise(real)
+    summary["planted"] = summarise_planted(planted)
+    summary["blind"] = summarise_blind(read_jsonl(args.blind))
+    summary["thresholds"] = {
+        "contradiction_ceiling": CONTRADICTION_CEILING,
+        "planted_rejection_floor": PLANTED_REJECTION_FLOOR,
+        "human_agreement_floor": HUMAN_AGREEMENT_FLOOR,
+    }
+    summary["passes_contradiction"] = (
+        summary["contradiction_rate"] is not None
+        and summary["contradiction_rate_upper_95"] is not None
+        and summary["contradiction_rate_upper_95"] <= CONTRADICTION_CEILING
     )
-    print(f"[plant] {len(planted)} planted errors -> {args.out}")
-    return 0
+    summary["passes_planted"] = summary["planted"]["passes"]
+
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    args.out.write_text(json.dumps(summary, indent=2) + "\n")
+    print(json.dumps(summary, indent=2), flush=True)
+    return 0 if (summary["passes_contradiction"] and summary["passes_planted"]) else 1
 
 
 if __name__ == "__main__":
