@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from tools.m2a_grounding import (
@@ -113,3 +114,48 @@ def test_review_page_uses_absolute_file_urls(tmp_path: Path):
     assert 'src="file:///' in html
     assert "file://artifacts" not in html
     assert "file://tmp" not in html
+
+
+def test_build_refuses_to_overwrite_existing_labels(tmp_path: Path, monkeypatch):
+    """A rebuild must not silently erase labels someone already produced."""
+
+    from tools import m2a_grounding
+
+    fetched = tmp_path / "fetched.jsonl"
+    fetched.write_text(
+        "\n".join(
+            json.dumps(
+                {
+                    "id": i,
+                    "file_name": f"{i}.jpg",
+                    "path": f"/tmp/{i}.jpg",
+                    "sha256": f"{i:064x}",
+                    "license_name": "CC BY 2.0",
+                }
+            )
+            for i in range(3)
+        )
+        + "\n"
+    )
+    out = tmp_path / "grounding"
+    out.mkdir()
+    (out / "labels.jsonl").write_text(json.dumps({"id": 0, "labels": {"colour": "red"}}) + "\n")
+
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "m2a_grounding.py",
+            "build",
+            "--fetched",
+            str(fetched),
+            "--out",
+            str(out),
+            "--html",
+            str(tmp_path / "r.html"),
+        ],
+    )
+
+    assert m2a_grounding.main() == 1
+    assert (
+        json.loads((out / "labels.jsonl").read_text().splitlines()[0])["labels"]["colour"] == "red"
+    )

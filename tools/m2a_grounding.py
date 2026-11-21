@@ -190,6 +190,11 @@ def main() -> int:
     build.add_argument("--images", type=int, default=DEFAULT_SAMPLE)
     build.add_argument("--seed", type=int, default=DEFAULT_SEED)
     build.add_argument("--html", type=Path, default=Path("/tmp/opencode/m2a_grounding_review.html"))
+    build.add_argument(
+        "--force",
+        action="store_true",
+        help="overwrite a labels.jsonl that already holds labels (destroys them)",
+    )
 
     score = sub.add_parser("score", help="score annotations against the labels")
     score.add_argument(
@@ -206,9 +211,22 @@ def main() -> int:
         if not records:
             print(f"[build] no records in {args.fetched}", flush=True)
             return 1
+        labels_path = args.out / "labels.jsonl"
+        if labels_path.exists() and not args.force:
+            existing = read_jsonl(labels_path)
+            filled = sum(1 for r in existing if any((r.get("labels") or {}).values()))
+            if filled:
+                # Re-running build would silently erase real labels. Refuse, and
+                # make the owner say --force.
+                print(
+                    f"[build] {labels_path} already holds {filled} labelled rows; "
+                    "refusing to overwrite (use --force to discard them)",
+                    flush=True,
+                )
+                return 1
         ids = sample_ids(records, args.images, args.seed)
         rows = blank_labels(records, ids)
-        write_jsonl(args.out / "labels.jsonl", rows)
+        write_jsonl(labels_path, rows)
         (args.out / "sample.json").write_text(
             json.dumps({"seed": args.seed, "n": len(ids), "ids": ids}, indent=2)
         )
