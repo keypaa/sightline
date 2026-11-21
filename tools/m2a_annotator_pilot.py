@@ -120,9 +120,50 @@ def write_report(path: Path, summary: dict[str, Any]) -> None:
     path.write_text("\n".join(lines), encoding="utf-8")
 
 
+def _ids_from(entries: Any) -> set[Any]:
+    """Accept bare ids, ``{"id": ...}`` rows, or review ``image_id`` rows."""
+
+    found: set[Any] = set()
+    for entry in entries or []:
+        if isinstance(entry, dict):
+            value = entry.get("id", entry.get("image_id"))
+            if value is not None:
+                found.add(value)
+        else:
+            found.add(entry)
+    return found
+
+
+def load_excluded(path: Path) -> set[Any]:
+    """Read the ids of images already used to shape the instrument."""
+
+    path = Path(path)
+    if not path.exists():
+        return set()
+    if path.suffix == ".json":
+        data = json.loads(path.read_text())
+        if isinstance(data, dict):
+            entries = data.get("confirmed_ids") or data.get("ids") or data.get("decisions") or []
+            return _ids_from(entries)
+        return _ids_from(data)
+    return _ids_from(read_jsonl(path))
+
+
+def exclude_ids(records: list[dict[str, Any]], excluded: set[Any]) -> list[dict[str, Any]]:
+    """Drop excluded images before sampling, so a burned set cannot reappear."""
+
+    return [record for record in records if record.get("id") not in excluded]
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--images", type=int, default=30, help="images to annotate")
+    parser.add_argument(
+        "--exclude",
+        type=Path,
+        default=None,
+        help="JSON/JSONL of image ids to exclude (e.g. the burned grounding set)",
+    )
     parser.add_argument("--host", default="http://localhost:8000/v1", help="vLLM base URL")
     parser.add_argument("--model", default="Qwen/Qwen3.6-27B-FP8", help="annotator model id")
     parser.add_argument("--revision", required=True, help="model revision, pinned in the row")
@@ -144,6 +185,14 @@ def main(argv: list[str] | None = None) -> int:
         print(f"fetched corpus at {args.fetched} is empty; nothing to pilot", flush=True)
         return 2
 
+    if args.exclude:
+        excluded = load_excluded(args.exclude)
+        records = exclude_ids(records, excluded)
+        print(f"[pilot] excluded {len(excluded)} burned ids; {len(records)} remain", flush=True)
+        if not records:
+            print("[pilot] every record was excluded; nothing left to pilot", flush=True)
+            return 2
+
     picked = sample_subset(records, args.images, seed=SEED)
     annotator = annotator_fields(
         model=args.model,
@@ -157,7 +206,15 @@ def main(argv: list[str] | None = None) -> int:
         order_seed=SEED,
         temperature=0.0,
     )
-    call = LocalVLLM(args.model, base_url=args.host, temperature=0.0)
+    call = LocalVLLM(
+        args.model,
+        base_url=args.host,
+        temperature=0.0,
+        # Qwen3.6 thinks by default. Left on, the reasoning trace can consume the
+        # whole token budget and return no answer, which the pilot would read as a
+        # failed annotation rather than a misconfigured server.
+        chat_template_kwargs={"enable_thinking": False},
+    )
 
     args.out.mkdir(parents=True, exist_ok=True)
     started = time.perf_counter()

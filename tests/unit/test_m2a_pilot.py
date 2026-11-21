@@ -106,7 +106,9 @@ def test_pilot_writes_grounded_rows_with_a_stubbed_transport(
     seen: list[tuple[str, str]] = []
 
     class FakeVLLM:
-        def __init__(self, model: str, *, base_url: str, temperature: float = 0.0) -> None:
+        def __init__(
+            self, model: str, *, base_url: str, temperature: float = 0.0, **kwargs
+        ) -> None:
             seen.append(("init", base_url))
 
         def __call__(self, model: str, image_path: Path, prompt: str):
@@ -163,3 +165,76 @@ def test_pilot_writes_grounded_rows_with_a_stubbed_transport(
     assert "grounded rate" in report.read_text()
     assert "http://localhost:8000/v1" in [event[1] for event in seen if event[0] == "init"]
     assert '"parse_rate"' in capsys.readouterr().out  # the summary is printed
+
+
+def test_pilot_disables_thinking_when_building_the_transport(monkeypatch, tmp_path):
+    """Qwen3.6 thinks by default; with a small cap that leaves no answer to parse."""
+
+    from tools import m2a_annotator_pilot as pilot
+
+    captured = {}
+
+    class FakeLocal:
+        def __init__(self, model, **kwargs):
+            captured.update(kwargs)
+
+        def __call__(self, model, image_path, prompt):
+            return "ok", {"input": 1, "output": 1}
+
+    class FakeAnnotator:
+        def __init__(self, **kwargs):
+            pass
+
+    monkeypatch.setattr(pilot, "LocalVLLM", FakeLocal)
+    monkeypatch.setattr(
+        pilot,
+        "annotate_one",
+        lambda *a, **k: {
+            "messages": None,
+            "parsed": False,
+            "tokens_in": None,
+            "tokens_out": None,
+            "model": "m",
+            "prompt_sha256": "x",
+        },
+    )
+    monkeypatch.setattr(pilot, "prompt_hash", lambda: "abc")
+    monkeypatch.setattr(pilot, "summarise", lambda rows: {"parse_rate": 0.0, "grounded_rate": 0.0})
+    monkeypatch.setattr(pilot, "write_report", lambda *a, **k: None)
+    monkeypatch.setattr(pilot, "sample_subset", lambda records, n, seed: records[:1])
+
+    fetched = tmp_path / "fetched.jsonl"
+    fetched.write_text(json.dumps({"id": 0, "file_name": "a.jpg", "path": "a.jpg"}) + "\n")
+
+    pilot.main(
+        [
+            "--fetched",
+            str(fetched),
+            "--out",
+            str(tmp_path / "out"),
+            "--report",
+            str(tmp_path / "r.md"),
+            "--revision",
+            "r",
+            "--quantization",
+            "fp8",
+            "--engine-version",
+            "0.17",
+            "--chat-template-sha256",
+            "d",
+        ]
+    )
+
+    assert captured.get("chat_template_kwargs") == {"enable_thinking": False}
+
+
+def test_pilot_excludes_listed_ids(tmp_path):
+    from tools import m2a_annotator_pilot as pilot
+
+    records = [{"id": i, "file_name": f"{i}.jpg", "path": f"{i}.jpg"} for i in range(10)]
+    excluded = tmp_path / "exclude.json"
+    excluded.write_text(json.dumps({"ids": [0, 1, 2]}))
+
+    kept = pilot.exclude_ids(records, pilot.load_excluded(excluded))
+
+    assert [r["id"] for r in kept] == list(range(3, 10))
