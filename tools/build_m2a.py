@@ -303,6 +303,15 @@ def cmd_decontaminate(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_corpus_manifest(args: argparse.Namespace) -> int:
+    from sightline.m2a.corpus_manifest import build
+
+    result = build(args.root)
+    (args.root / "corpus-manifest.json").write_text(json.dumps(result, indent=2))
+    print(json.dumps(result, indent=2))
+    return 0
+
+
 def cmd_manifest(args: argparse.Namespace) -> int:
     rows = read_jsonl(args.root / "conversations.jsonl")
     result = manifest(args.root / "conversations.jsonl", seed=args.seed)
@@ -393,6 +402,9 @@ def main() -> int:
     p = sub.add_parser("manifest")
     p.add_argument("--seed", type=int, default=0)
     p.set_defaults(func=cmd_manifest)
+
+    p = sub.add_parser("corpus-manifest", help="manifest over every corpus layer")
+    p.set_defaults(func=cmd_corpus_manifest)
 
     p = sub.add_parser("decontaminate")
     p.add_argument(
