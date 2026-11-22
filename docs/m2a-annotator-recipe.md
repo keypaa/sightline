@@ -158,7 +158,7 @@ for W in 8 16 32; do
   START=$(date +%s.%N)
   PYTHONPATH=src python3 tools/build_m2a.py --root experiments/m2a_probe/c$W annotate \
       --workers $W --limit 200 \
-      --host http://localhost:8000/v1 \
+      --base-url http://localhost:8000/v1 \
       --model Qwen/Qwen3.6-27B-FP8 \
       --revision a56219b8202864dc6d3e565be5ff1eea01f54cb4 \
       --quantization fp8 --engine-version 0.34.0 \
@@ -205,7 +205,7 @@ cd /path/to/sightline
 
 PYTHONPATH=src python3 tools/build_m2a.py --root experiments/m2a_iter20k annotate \
   --workers <WINNER_FROM_PROBE> \
-  --host http://localhost:8000/v1 \
+  --base-url http://localhost:8000/v1 \
   --model Qwen/Qwen3.6-27B-FP8 \
   --revision a56219b8202864dc6d3e565be5ff1eea01f54cb4 \
   --quantization fp8 \
