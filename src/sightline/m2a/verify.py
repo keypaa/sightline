@@ -866,8 +866,12 @@ def main() -> int:
             workers=args.workers,
         )
         summary = summarise(results)
+        # judge_claims stops after a run of transport failures, so a partial run
+        # must not report success. Count the claims still lacking a verdict row.
+        judged_ids = {row["claim_id"] for row in read_jsonl(args.out) if not row.get("error")}
+        summary["n_unjudged"] = sum(1 for c in claims if c.claim_id not in judged_ids)
         print(json.dumps(summary, indent=2), flush=True)
-        return 0
+        return 1 if summary["n_unjudged"] else 0
 
     if args.command == "blind":
         claims = [_claim_from_row(row) for row in read_jsonl(args.claims)]

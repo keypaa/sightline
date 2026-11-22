@@ -157,17 +157,21 @@ def test_review_main_runs_without_a_conflicting_flag(tmp_path: Path, monkeypatch
     from tools import m2a_review
 
     results = tmp_path / "results.jsonl"
+    # The real file is flat: one verdict row per claim per verifier.
     results.write_text(
         json.dumps(
             {
+                "claim_id": "abc",
                 "image_id": 1,
                 "turn": 1,
                 "claim": "Red (car)",
                 "claim_type": "colour",
                 "planted": False,
-                "contradicted": False,
-                "path": None,
-                "verdicts": [{"model": "v", "verdict": "true", "evidence": "yes"}],
+                "verifier_model": "v",
+                "verdict": "true",
+                "evidence": "yes",
+                "error": None,
+                "image_path": None,
             }
         )
         + "\n"
@@ -195,9 +199,11 @@ def test_verdict_rows_carry_turn_and_claim_id():
                 "claim": "c",
                 "claim_type": "colour",
                 "planted": False,
-                "contradicted": False,
-                "path": None,
-                "verdicts": [],
+                "verifier_model": "v",
+                "verdict": "can't-tell",
+                "evidence": "",
+                "error": None,
+                "image_path": None,
             }
         ]
     )
@@ -218,9 +224,11 @@ def test_render_page_carries_the_claim_id(tmp_path: Path):
                 "claim": "Red (car)",
                 "claim_type": "colour",
                 "planted": False,
-                "contradicted": False,
-                "path": None,
-                "verdicts": [],
+                "verifier_model": "v",
+                "verdict": "true",
+                "evidence": "yes",
+                "error": None,
+                "image_path": None,
             }
         ]
     )

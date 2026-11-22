@@ -598,3 +598,52 @@ def test_a_retry_can_heal_a_previous_error_row(monkeypatch, tmp_path):
     assert len(rows) == 1
     assert rows[0]["verdict"] == "true"
     assert rows[0]["error"] is None
+
+
+def test_a_stoped_judge_run_exits_nonzero(monkeypatch, tmp_path):
+    """An early quota stop must not look like a successful complete run."""
+
+    import sightline.m2a.verifier_transport as vt
+    import sightline.m2a.verify as verify
+    from sightline.m2a.transport import RateLimited
+
+    claims = tmp_path / "claims.jsonl"
+    lines = [
+        {
+            "claim_id": f"c{i}",
+            "image_id": i,
+            "turn": 1,
+            "claim": "c",
+            "claim_type": "colour",
+            "answer": "a",
+            "question": "q",
+            "image_path": None,
+        }
+        for i in range(3)
+    ]
+    claims.write_text("\n".join(json.dumps(r) for r in lines) + "\n")
+
+    class Boom:
+        model = "v"
+
+        def __call__(self, image, prompt):
+            raise RateLimited(status=429, message="Rate limit exceeded")
+
+    monkeypatch.setattr(vt, "OpencodeCaller", lambda model, timeout=300: Boom())
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "verify",
+            "judge",
+            "--claims",
+            str(claims),
+            "--models",
+            "v",
+            "--out",
+            str(tmp_path / "v.jsonl"),
+            "--workers",
+            "1",
+        ],
+    )
+
+    assert verify.main() == 1
