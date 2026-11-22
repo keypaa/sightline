@@ -193,17 +193,20 @@ the run record before choosing — do not pick 32 because the table says so.
 
 ## 5. Run the 20k annotation
 
+Use the `$TEMPLATE_SHA` exported in section 4 and the `--workers` value you selected
+from the probe. Do not reuse the hardcoded values from an earlier run.
+
 ```bash
 cd /path/to/sightline
 
 PYTHONPATH=src python3 tools/build_m2a.py --root experiments/m2a_iter20k annotate \
-  --workers 32 \
+  --workers <WINNER_FROM_PROBE> \
   --host http://localhost:8000/v1 \
   --model Qwen/Qwen3.6-27B-FP8 \
   --revision a56219b8202864dc6d3e565be5ff1eea01f54cb4 \
   --quantization fp8 \
   --engine-version 0.34.0 \
-  --chat-template-sha256 1b8361565cc35d47 \
+  --chat-template-sha256 "$TEMPLATE_SHA" \
   --seed 0
 ```
 
