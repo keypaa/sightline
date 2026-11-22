@@ -109,6 +109,7 @@ def claim(image_id: int = 0, planted: bool = False) -> Claim:
         claim_type="colour",
         planted=planted,
         image_path=None,
+        claim_id=f"id-{image_id}",
     )
 
 
@@ -206,3 +207,19 @@ def test_blind_row_carries_the_claim_id_and_model():
     assert rows[0]["claim_id"] == "abc"
     assert rows[0]["blind_model"] == "hy4"
     assert rows[0]["judged_at"]
+
+
+def test_an_empty_completion_is_a_transport_error(monkeypatch, tmp_path):
+    """A 200 with no text must not be recorded as can't-tell."""
+
+    class Resp:
+        stdout = ""
+        returncode = 0
+        stderr = ""
+
+    monkeypatch.setattr("sightline.m2a.verifier_transport.subprocess.run", lambda *a, **k: Resp())
+
+    import pytest
+
+    with pytest.raises(TransportError):
+        OpencodeCaller("m")(None, "prompt")

@@ -25,6 +25,9 @@ from sightline.m2a.verify import (
     summarise_blind,
     summarise_planted,
 )
+from sightline.record import git_state
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 LAYERS = (
     "fetched.jsonl",
@@ -84,6 +87,7 @@ def build(root: Path) -> dict[str, Any]:
 
     real = [r for r in results if not r.claim.planted]
     planted = [r for r in results if r.claim.planted]
+    judged = [r for r in results if r.verdicts and all(not v.error for v in r.verdicts)]
 
     summary = summarise(real)
     planted_summary = summarise_planted(planted)
@@ -124,9 +128,14 @@ def build(root: Path) -> dict[str, Any]:
 
     return {
         "built_at": now_iso(),
+        # Which code produced this manifest. A number that cannot be tied to a
+        # commit cannot be reproduced.
+        "git": git_state(PROJECT_ROOT),
         "n_images": len(fetched),
         "n_conversations": len(conversations),
         "n_claims": len(claims),
+        "n_planted": len(planted),
+        "n_judged": len(judged),
         "n_errored": summary["n_errored"],
         "n_decisions": len(decisions),
         "source_count": len(sources),

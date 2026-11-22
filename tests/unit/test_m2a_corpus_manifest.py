@@ -115,3 +115,42 @@ def test_manifest_reads_planted_claims(tmp_path: Path):
     manifest = build(tmp_path)
 
     assert manifest["planted_rejection_rate"] == 1.0
+
+
+def test_manifest_names_the_code_that_built_it(tmp_path: Path):
+    manifest = build(tmp_path)
+
+    assert "git" in manifest
+    assert "commit" in manifest["git"]
+
+
+def test_manifest_emits_its_denominators(tmp_path: Path):
+    write_jsonl(
+        tmp_path / "claims.jsonl",
+        [{"claim_id": "a", "image_id": 1, "turn": 1, "claim": "c", "claim_type": "colour"}],
+    )
+    write_jsonl(
+        tmp_path / "planted.jsonl",
+        [
+            {
+                "claim_id": "p",
+                "image_id": 1,
+                "turn": 1,
+                "claim": "d",
+                "claim_type": "colour",
+                "planted": True,
+            }
+        ],
+    )
+    write_jsonl(
+        tmp_path / "verdicts.jsonl",
+        [
+            {"claim_id": "a", "verifier_model": "v", "verdict": "true", "error": None},
+            {"claim_id": "p", "verifier_model": "v", "verdict": "true", "error": None},
+        ],
+    )
+
+    manifest = build(tmp_path)
+
+    assert manifest["n_judged"] == 2
+    assert manifest["n_planted"] == 1

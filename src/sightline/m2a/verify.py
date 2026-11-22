@@ -34,8 +34,10 @@ from typing import Any
 from sightline.m2a.ids import claim_id, now_iso
 from sightline.m2a.transport import TransportError
 
-# Two verifier families, neither of which is the annotator (Qwen3.6-27B-FP8).
-VERIFIERS = ("opencode/hy4-flash-free", "kilo/particle-ai/particle-1:free")
+# One verifier (DECISIONS 0049, spec section 1). A second family is available via
+# --models for a deliberate cross-check, but it is not the default: two verifiers
+# double the quota cost for a robustness gain we cannot afford.
+VERIFIERS = ("opencode/hy4-flash-free",)
 
 # The blind reader is text-only and must not be one of the verifiers.
 BLIND_MODEL = "kilo/z-ai/glm-5-turbo:free"
@@ -335,6 +337,9 @@ def plant_errors(claims: list[Claim], seed: int = 0) -> list[Claim]:
                     # id; sharing the original's would collide in the verdict index.
                     claim_id=claim_id(claim.image_id, claim.turn, perturbed),
                     source_run=claim.source_run,
+                    # Without the image the verifier can only guess, which would make
+                    # the planted rejection rate measure nothing.
+                    image_path=claim.image_path,
                 )
             )
     rng.shuffle(planted)
@@ -614,9 +619,14 @@ def judge_claims(
 
     from concurrent.futures import ThreadPoolExecutor
 
+    prompt_sha256 = judge_verdict_prompt_sha256()
     prior: dict[tuple, Verdict] = {}
     for row in existing or []:
         if row.get("error"):
+            continue
+        # A verdict that answered a different judging prompt answers a different
+        # question, so it is not reused when the instructions change.
+        if row.get("verifier_prompt_sha256") not in (None, prompt_sha256):
             continue
         key = (row.get("claim_id"), row.get("verifier_model"))
         prior[key] = Verdict(
@@ -624,6 +634,10 @@ def judge_claims(
             verdict=row.get("verdict", VERDICT_UNSURE),
             evidence=row.get("evidence", ""),
         )
+
+    for claim in claims:
+        if not claim.claim_id:
+            raise ValueError("claim_id is empty; re-run extract so claims carry ids")
 
     todo: list[tuple[Claim, list[Any]]] = []
     for claim in claims:
@@ -648,7 +662,12 @@ def judge_claims(
             except TransportError as exc:
                 # A failed judgement is not a "can't-tell" about the claim; it is a
                 # gap to retry, so it is marked as an error rather than a verdict.
-                verdicts.append(Verdict(caller.model, VERDICT_UNSURE, evidence="", error=str(exc)))
+                # It must still be written, or a quota failure leaves no trace at all
+                # and the run looks clean while having judged nothing.
+                produced = Verdict(caller.model, VERDICT_UNSURE, evidence="", error=str(exc))
+                verdicts.append(produced)
+                if on_verdict is not None:
+                    on_verdict(claim, produced)
         return ClaimResult(claim=claim, verdicts=verdicts)
 
     results: list[ClaimResult] = []
@@ -843,21 +862,27 @@ def main() -> int:
         print(json.dumps(summary, indent=2), flush=True)
         return 0
 
+    # judge writes flat rows: one per claim per verifier. Group them by claim_id.
     verdict_rows = read_jsonl(args.verdicts)
-    results = [
-        ClaimResult(
-            claim=_claim_from_row(row),
-            verdicts=[
-                Verdict(
-                    model=v.get("model", ""),
-                    verdict=v.get("verdict", VERDICT_UNSURE),
-                    evidence=v.get("evidence", ""),
-                    error=v.get("error"),
-                )
-                for v in row.get("verdicts") or []
-            ],
+    claims_path = Path("experiments/m2a_grounding/claims.jsonl")
+    claim_text = {}
+    if claims_path.exists():
+        for row in read_jsonl(claims_path):
+            claim_text[row.get("claim_id")] = row
+
+    grouped: dict[str, list[Verdict]] = {}
+    for row in verdict_rows:
+        grouped.setdefault(row.get("claim_id"), []).append(
+            Verdict(
+                model=row.get("verifier_model", ""),
+                verdict=row.get("verdict", VERDICT_UNSURE),
+                evidence=row.get("evidence", ""),
+                error=row.get("error"),
+            )
         )
-        for row in verdict_rows
+    results = [
+        ClaimResult(claim=_claim_from_row(claim_text.get(cid, {"claim_id": cid})), verdicts=vs)
+        for cid, vs in grouped.items()
     ]
     real = [r for r in results if not r.claim.planted]
     planted = [r for r in results if r.claim.planted]

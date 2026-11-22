@@ -44,7 +44,9 @@ def _verdict_rows(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
         verdicts = result.get("verdicts") or []
         rows.append(
             {
+                "claim_id": result.get("claim_id"),
                 "image_id": result.get("image_id") or result.get("id"),
+                "turn": result.get("turn"),
                 "claim": result.get("claim", ""),
                 "claim_type": result.get("claim_type", "unknown"),
                 "planted": bool(result.get("planted")),
@@ -156,7 +158,7 @@ def render(rows: list[dict[str, Any]], out: Path, images_dir: Path, title: str) 
         card_verdict = _card_verdict(row)
         cards.append(
             f"""<article class="card" data-id="{image_id}" data-turn="{turn}"
-     data-verdict="{card_verdict}">
+     data-claim-id="{row.get("claim_id") or ""}" data-verdict="{card_verdict}">
   <div class="image">{img_html}</div>
   <div class="body">
     <div class="head">
@@ -251,7 +253,10 @@ def main() -> int:
         "--merge", type=Path, default=None, help="fold this review export into decisions.jsonl"
     )
     parser.add_argument(
-        "--out", type=Path, default=Path("experiments/m2a_grounding/decisions.jsonl")
+        "--decisions-out",
+        type=Path,
+        default=Path("experiments/m2a_grounding/decisions.jsonl"),
+        help="where merge writes decisions.jsonl",
     )
     parser.add_argument("--reviewer", default="owner")
     args = parser.parse_args()
@@ -260,7 +265,7 @@ def main() -> int:
         export = json.loads(args.merge.read_text())
         added, rejected = merge_decisions(
             export,
-            args.out,
+            args.decisions_out,
             reviewer=args.reviewer,
             reviewed_at=now_iso(),
             claims_path=args.claims,

@@ -135,3 +135,87 @@ def test_merge_prefers_a_claim_id_from_the_export(tmp_path: Path):
     assert (added, rejected) == (1, 0)
     row = json.loads(out.read_text().splitlines()[0])
     assert row["claim_id"] == "abc"
+
+
+def test_review_main_runs_without_a_conflicting_flag(tmp_path: Path, monkeypatch):
+    """The tool crashed at parser construction: --out was registered twice."""
+
+    import sys
+
+    from tools import m2a_review
+
+    results = tmp_path / "results.jsonl"
+    results.write_text(
+        json.dumps(
+            {
+                "image_id": 1,
+                "turn": 1,
+                "claim": "Red (car)",
+                "claim_type": "colour",
+                "planted": False,
+                "contradicted": False,
+                "path": None,
+                "verdicts": [{"model": "v", "verdict": "true", "evidence": "yes"}],
+            }
+        )
+        + "\n"
+    )
+    out = tmp_path / "review.html"
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["m2a_review.py", "--claims", str(results), "--out", str(out), "--sample", "5"],
+    )
+    assert m2a_review.main() == 0
+    assert out.exists()
+
+
+def test_verdict_rows_carry_turn_and_claim_id():
+    from tools.m2a_review import _verdict_rows
+
+    rows = _verdict_rows(
+        [
+            {
+                "claim_id": "abc",
+                "image_id": 1,
+                "turn": 2,
+                "claim": "c",
+                "claim_type": "colour",
+                "planted": False,
+                "contradicted": False,
+                "path": None,
+                "verdicts": [],
+            }
+        ]
+    )
+
+    assert rows[0]["turn"] == 2
+    assert rows[0]["claim_id"] == "abc"
+
+
+def test_render_page_carries_the_claim_id(tmp_path: Path):
+    from tools.m2a_review import _verdict_rows, render
+
+    rows = _verdict_rows(
+        [
+            {
+                "claim_id": "abc",
+                "image_id": 1,
+                "turn": 2,
+                "claim": "Red (car)",
+                "claim_type": "colour",
+                "planted": False,
+                "contradicted": False,
+                "path": None,
+                "verdicts": [],
+            }
+        ]
+    )
+    out = tmp_path / "r.html"
+
+    render(rows, out, tmp_path, "test")
+
+    html = out.read_text()
+    assert 'data-claim-id="abc"' in html
+    assert 'data-turn="2"' in html

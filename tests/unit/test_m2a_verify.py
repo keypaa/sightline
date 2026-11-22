@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -18,6 +19,7 @@ from sightline.m2a.verify import (
     Verdict,
     classify_claim,
     extract_claims,
+    judge_claims,
     judge_verdict,
     plant_errors,
     summarise,
@@ -199,8 +201,8 @@ def test_frozen_thresholds_have_their_decided_values():
     assert HUMAN_AGREEMENT_FLOOR == 0.85
 
 
-def test_two_verifiers_are_configured_and_neither_is_the_annotator():
-    assert len(VERIFIERS) == 2
+def test_the_default_verifier_is_one_model_and_not_the_annotator():
+    assert len(VERIFIERS) == 1
     assert all("qwen3.6" not in model.lower() for model in VERIFIERS)
 
 
@@ -346,3 +348,185 @@ def test_an_error_row_is_never_counted_as_cant_tell():
     assert summary["n_errored"] == 1
     assert summary["n_judged"] == 0
     assert summary["contradiction_rate"] is None
+
+
+def test_report_reads_flat_verdict_rows(monkeypatch, tmp_path):
+    """judge writes flat rows; report must read the same shape it writes."""
+
+    import sightline.m2a.verify as verify
+
+    claims = tmp_path / "claims.jsonl"
+    claims.write_text(
+        json.dumps(
+            {
+                "claim_id": "a",
+                "image_id": 1,
+                "turn": 1,
+                "claim": "Red (car)",
+                "claim_type": "colour",
+                "answer": "Red.",
+                "question": "q",
+            }
+        )
+        + "\n"
+    )
+    verdicts = tmp_path / "verdicts.jsonl"
+    verdicts.write_text(
+        json.dumps(
+            {
+                "claim_id": "a",
+                "image_id": 1,
+                "verifier_model": "v",
+                "verdict": "false",
+                "evidence": "no",
+                "error": None,
+            }
+        )
+        + "\n"
+    )
+
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "verify",
+            "report",
+            "--verdicts",
+            str(verdicts),
+            "--blind",
+            str(tmp_path / "none.jsonl"),
+            "--out",
+            str(tmp_path / "s.json"),
+        ],
+    )
+    assert verify.main() == 1
+    summary = json.loads((tmp_path / "s.json").read_text())
+    assert summary["n_claims"] == 1
+    assert summary["contradiction_rate"] == 1.0
+
+
+def test_judge_writes_a_row_for_a_failed_call(monkeypatch, tmp_path):
+    """A rate limit must be persisted as an error row, not swallowed."""
+
+    import sightline.m2a.verify as verify
+    from sightline.m2a.transport import RateLimited
+
+    claims = tmp_path / "claims.jsonl"
+    claims.write_text(
+        json.dumps(
+            {
+                "claim_id": "a",
+                "image_id": 1,
+                "turn": 1,
+                "claim": "Red (car)",
+                "claim_type": "colour",
+                "answer": "Red.",
+                "question": "q",
+                "image_path": None,
+            }
+        )
+        + "\n"
+    )
+
+    class Boom:
+        model = "v"
+
+        def __call__(self, image, prompt):
+            raise RateLimited(status=429, message="Rate limit exceeded")
+
+    import sightline.m2a.verifier_transport as vt
+
+    monkeypatch.setattr(vt, "OpencodeCaller", lambda model, timeout=300: Boom())
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "verify",
+            "judge",
+            "--claims",
+            str(claims),
+            "--out",
+            str(tmp_path / "v.jsonl"),
+            "--workers",
+            "1",
+        ],
+    )
+    verify.main()
+
+    lines = (tmp_path / "v.jsonl").read_text().splitlines()
+    rows = [json.loads(line) for line in lines if line.strip()]
+    assert len(rows) == 1
+    assert rows[0]["error"]
+
+
+def test_judge_refuses_a_claim_with_no_id():
+    from sightline.m2a.verify import judge_claims
+
+    class Stub:
+        model = "v"
+
+        def __call__(self, image, prompt):
+            return "true\nyes"
+
+    claim = Claim(0, 1, "q", "a", "c", "colour", claim_id="")
+    try:
+        judge_claims([claim], [Stub()])
+    except ValueError as exc:
+        assert "claim_id" in str(exc)
+    else:
+        raise AssertionError("an empty claim_id must be refused")
+
+
+def test_planted_claims_keep_their_image():
+    """A planted claim judged without its image measures nothing."""
+
+    original = Claim(
+        image_id=5,
+        turn=1,
+        question="q",
+        answer="Red.",
+        claim="Red (car)",
+        claim_type="colour",
+        claim_id="a",
+        image_path="artifacts/m2a_images/5.jpg",
+    )
+    planted = plant_errors([original], seed=0)[0]
+
+    assert planted.image_path == "artifacts/m2a_images/5.jpg"
+    assert planted.claim_id != original.claim_id
+
+
+def test_resume_reasks_when_the_judging_prompt_changed():
+    """A verdict from a different prompt answers a different question."""
+
+    class Stub:
+        model = "v"
+
+        def __init__(self):
+            self.calls = 0
+
+        def __call__(self, image, prompt):
+            self.calls += 1
+            return "true\nyes"
+
+    caller = Stub()
+    claim = Claim(0, 1, "q", "a", "c", "colour", claim_id="abc")
+    existing = [
+        {
+            "claim_id": "abc",
+            "verifier_model": "v",
+            "verdict": "true",
+            "evidence": "old",
+            "error": None,
+            "verifier_prompt_sha256": "stale",
+        }
+    ]
+
+    judge_claims([claim], [caller], existing=existing)
+
+    assert caller.calls == 1
+
+
+def test_an_empty_completion_is_an_error_not_a_cant_tell():
+    from sightline.m2a.verify import judge_verdict
+
+    verdict, _ = judge_verdict("")
+    assert verdict == "can't-tell"

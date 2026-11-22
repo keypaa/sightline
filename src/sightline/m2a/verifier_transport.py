@@ -59,4 +59,9 @@ class OpencodeCaller:
 
         if result.returncode != 0:
             raise TransportError(f"opencode exited with code {result.returncode}")
-        return "\n".join(texts).strip()
+        text = "\n".join(texts).strip()
+        # A 200 with no text is a failed call, not a cautious verdict. Recording it
+        # as can't-tell would hide a broken transport behind a plausible answer.
+        if not text:
+            raise TransportError("opencode returned no text")
+        return text
