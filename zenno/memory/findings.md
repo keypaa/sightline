@@ -93,6 +93,33 @@ sit at 0.80–0.98. **[V]** A per-task average of 0.81 conceals it; always read
 
 ## What does not work
 
+### vLLM serving wedges silently after ~7 h of continuous annotation
+The 20k run stopped advancing at 15,480/19,962 rows with no error line in
+`m2a_iter20k_full.log`. All three server processes (launcher, EngineCore,
+Rust frontend) were still alive under SIGTERM, GPU memory held at 96,281 MiB,
+GPU utilisation 0%, and `GET /v1/models` returned HTTP code `000` (no response
+at all). Clients blocked on the 900 s per-call timeout in
+`src/sightline/m2a/local_transport.py`, so nothing was written and the
+rate-limit guard never tripped — no `[retry]` line appeared. **[V]** GPU box,
+2026-11-22: `curl -w` + `nvidia-smi` + `ps -p 693,961,982`, captured before
+kill.
+
+SIGTERM did not clear it; `kill -9` on all three PIDs dropped GPU memory to
+0 MiB, and a clean re-serve reached `server_http=200`. The 15,480 parsed rows
+were intact — resume is by parsed row and lost nothing. **[V]**
+
+**Mitigation:** check `curl -s -m 10 -o /dev/null -w '%{http_code}' .../v1/models`
+returns `200` before launching annotate, and again if progress stops. Run the
+server with `nohup ... &` + `disown` on a single-terminal box so it survives
+shell exit; save the PID so the wedged processes can be killed precisely.
+
+**Why this mattered:** the first diagnosis was an O(n^2) annotator check
+(`check_single_annotator` rescanned every prior row per write). That was a real
+bug and was fixed in `e2db579`, but a quadratic check slows writes — it cannot
+explain zero rows and no progress line. Total stall + live processes + no HTTP
+response is the server, not the corpus code. **[I]** on that last inference,
+supported by the observed metrics above.
+
 ### Single-token visual injection — clearly worse
 Replacing 256 spliced patches with one mean-pooled token dropped teacher-forced
 top-1 from 10/20 to **0/20** at 300 steps, and the loss from 0.023 to 3.82.
