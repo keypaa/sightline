@@ -264,6 +264,7 @@ def test_stage_images_downloads_only_missing_files(tmp_path: Path):
     """Re-staging a complete cache must be a no-op, not a re-download."""
 
     from PIL import Image
+
     from sightline.m2a.images import stage_images
 
     good = tmp_path / "present.jpg"
@@ -292,6 +293,7 @@ def test_stage_images_downloads_only_missing_files(tmp_path: Path):
 
 def test_stage_images_is_idempotent(tmp_path: Path):
     from PIL import Image
+
     from sightline.m2a.images import stage_images
 
     image = tmp_path / "a.jpg"
