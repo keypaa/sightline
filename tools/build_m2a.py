@@ -33,7 +33,7 @@ from sightline.m2a.decontaminate import (
     load_benchmark_hashes,
     write_report,
 )
-from sightline.m2a.images import content_hash, dedupe, dhash, fetch
+from sightline.m2a.images import content_hash, dedupe, dhash, fetch, stage_images
 from sightline.m2a.licence import classify
 from sightline.m2a.manifest import manifest, splits, usable_records
 from sightline.m2a.sample import sample_subset
@@ -66,6 +66,22 @@ def write_jsonl(path: Path, rows: list[dict]) -> None:
 
 def report(stage: str, incoming: int, kept: int, dropped: int, **extra) -> None:
     print(f"[{stage}] in={incoming} kept={kept} dropped={dropped} {extra}", flush=True)
+
+
+def cmd_stage_images(args: argparse.Namespace) -> int:
+    records = read_jsonl(args.manifest)
+    if not records:
+        print(f"[stage-images] no manifest at {args.manifest}", flush=True)
+        return 2
+    if args.limit:
+        records = records[: args.limit]
+    counts = stage_images(records, args.cache, _get, workers=args.workers)
+    print(
+        f"[stage-images] present={counts['n_present']} "
+        f"downloaded={counts['n_downloaded']} failed={counts['n_failed']}",
+        flush=True,
+    )
+    return 1 if counts["n_failed"] else 0
 
 
 def cmd_index(args: argparse.Namespace) -> int:
@@ -331,6 +347,13 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", type=Path, default=DEFAULT_ROOT)
     sub = parser.add_subparsers(dest="command", required=True)
+
+    p = sub.add_parser("stage-images", help="rebuild an image cache from a committed manifest")
+    p.add_argument("--manifest", type=Path, default=Path("experiments/m2a_iter20k/fetched.jsonl"))
+    p.add_argument("--cache", type=Path, default=Path("artifacts/m2a_images"))
+    p.add_argument("--workers", type=int, default=8)
+    p.add_argument("--limit", type=int, default=0)
+    p.set_defaults(func=cmd_stage_images)
 
     p = sub.add_parser("index")
     p.add_argument("--annotations", required=True)

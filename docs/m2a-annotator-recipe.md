@@ -45,33 +45,32 @@ Floors are pinned in `DECISIONS/0050`: vLLM ≥ 0.17.0, transformers ≥ 5.8.0. 
 verified engine version was **0.34.0**; record whatever is installed with
 `python3 -c 'import vllm; print(vllm.__version__)'`.
 
-## 2. Prepare the images
+## 2. Stage the images on the GPU box
 
-A clone has `fetched.jsonl` (committed) but not the images (gitignored). From this laptop,
-push only the images the pilot or run needs:
+The image cache is **not** committed, but the manifest is — and it carries each image's
+COCO URL and sha256. The cache is reconstructed from it, so nothing is transferred by
+hand:
 
 ```bash
-cd /home/keypaa/Work/sightline
-PYTHONPATH=src:. python3 - <<'PY'
-import json, shutil
-from pathlib import Path
-from sightline.m2a.sample import sample_subset
+cd /path/to/sightline
 
-root = Path(".").resolve()
-dest = Path("/path/to/clone")            # the GPU box clone
-records = [json.loads(l) for l in (root/"experiments/m2a_iter20k/fetched.jsonl").open() if l.strip()]
-picked = sample_subset(records, 500, seed=0)   # pilot; use 19962 for the full corpus
+# The 200 images the c=8/16/32 probes will read
+PYTHONPATH=src python3 tools/build_m2a.py stage-images \
+  --manifest experiments/m2a_iter20k/fetched.jsonl \
+  --cache artifacts/m2a_images --workers 8 --limit 200
 
-for r in picked:
-    target = dest / r["path"]
-    target.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(root / r["path"], target)
-print(f"copied {len(picked)} images")
-PY
+# Later, before the full run: all 19,962
+PYTHONPATH=src python3 tools/build_m2a.py stage-images \
+  --manifest experiments/m2a_iter20k/fetched.jsonl \
+  --cache artifacts/m2a_images --workers 16
 ```
 
-`sample_subset` is the same function the pipeline uses, so the files copied are exactly
-the files that will be read.
+`stage-images` is idempotent. A file already on disk with the manifest's sha256 is not
+downloaded; a file whose bytes disagree is deleted and re-fetched. Verified locally:
+staging 200 images over a complete cache reported `present=200 downloaded=0 failed=0`.
+
+It exits 0 when every image is present and correct, 1 if any failed, 2 if the manifest
+is missing. Re-run it safely at any time — a partial download is not a problem.
 
 ## 3. Serve
 
@@ -131,8 +130,9 @@ command is concurrent (`--workers`); the pilot simply didn't use it. The project
 c=32 is ~36,000 conversations/hour — roughly 20k in 35 minutes.
 
 **Measure before committing** (rule 9). `annotate` reads `fetched.jsonl` from its
-`--root`, so each probe needs its own root with that file copied in. Wall time is not
-in the run record, so wrap each run in `/usr/bin/time`.
+`--root`, so each probe needs its own root. The `cp` below copies that small committed
+**manifest** — not images; the images were staged by section 2 into the shared cache.
+Wall time is not in the run record, so wrap each run in `/usr/bin/time`.
 
 First compute the template hash once and export it:
 

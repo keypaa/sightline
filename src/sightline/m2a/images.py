@@ -100,6 +100,50 @@ def fetch(record: dict[str, Any], cache_dir: Path, get: Callable[[str], bytes]) 
     return path
 
 
+def stage_images(
+    records: list[dict[str, Any]],
+    cache_dir: Path,
+    get: Callable[[str], bytes],
+    *,
+    workers: int = 1,
+) -> dict[str, int]:
+    """Reconstruct an image cache from a committed manifest, idempotently.
+
+    A file that already exists with the recorded sha256 is never downloaded. A
+    file whose bytes disagree with the manifest is evicted, so a retry fetches it
+    again rather than looping over poisoned bytes.
+    """
+
+    from concurrent.futures import ThreadPoolExecutor
+
+    cache_dir = Path(cache_dir)
+    cache_dir.mkdir(parents=True, exist_ok=True)
+
+    def work(record: dict[str, Any]) -> str:
+        path = cache_dir / record["file_name"]
+        expected = str(record.get("sha256") or record.get("expected_sha256") or "")
+        if path.exists() and content_hash(path) == expected:
+            return "present"
+        if path.exists():
+            path.unlink()
+        try:
+            fetch({**record, "expected_sha256": expected}, cache_dir, get)
+        except (ValueError, OSError):
+            path.unlink(missing_ok=True)
+            return "failed"
+        return "downloaded"
+
+    counts = {"n_present": 0, "n_downloaded": 0, "n_failed": 0}
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        for outcome in pool.map(work, records):
+            counts[
+                {"present": "n_present", "downloaded": "n_downloaded", "failed": "n_failed"}[
+                    outcome
+                ]
+            ] += 1
+    return counts
+
+
 def dedupe(
     records: list[dict[str, Any]],
     hashes: dict[int, tuple[str, int]],

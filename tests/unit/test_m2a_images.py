@@ -258,3 +258,50 @@ def test_fetch_subparser_seed_reaches_the_recorded_order(
 
     fetched = build_m2a.read_jsonl(root / "fetched.jsonl")
     assert fetched[0]["order_seed"] == 7
+
+
+def test_stage_images_downloads_only_missing_files(tmp_path: Path):
+    """Re-staging a complete cache must be a no-op, not a re-download."""
+
+    from PIL import Image
+    from sightline.m2a.images import stage_images
+
+    good = tmp_path / "present.jpg"
+    Image.new("RGB", (8, 8), "red").save(good)
+    digest = content_hash(good)
+
+    calls = []
+
+    def get(url):
+        calls.append(url)
+        return good.read_bytes()
+
+    records = [
+        {"id": 1, "file_name": "present.jpg", "url": "http://x/a", "sha256": digest},
+        {"id": 2, "file_name": "absent.jpg", "url": "http://x/b", "sha256": "0" * 64},
+    ]
+
+    # Second record has a deliberately wrong expected hash so it fails verification;
+    # the first must still be skipped without a download.
+    result = stage_images(records, tmp_path, get, workers=1)
+
+    assert calls == ["http://x/b"]
+    assert result["n_present"] == 1
+    assert result["n_failed"] == 1
+
+
+def test_stage_images_is_idempotent(tmp_path: Path):
+    from PIL import Image
+    from sightline.m2a.images import stage_images
+
+    image = tmp_path / "a.jpg"
+    Image.new("RGB", (8, 8), "blue").save(image)
+    record = {"id": 1, "file_name": "a.jpg", "url": "http://x/a", "sha256": content_hash(image)}
+
+    def boom(url):
+        raise AssertionError("must not download an already-correct file")
+
+    result = stage_images([record], tmp_path, boom, workers=1)
+
+    assert result["n_present"] == 1
+    assert result["n_downloaded"] == 0
