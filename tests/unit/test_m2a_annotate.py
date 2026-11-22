@@ -416,3 +416,24 @@ def test_a_failed_annotation_becomes_a_row_not_a_crash():
     assert row["messages"] is None
     assert row["error"] == "vLLM returned no content"
     assert row["run_id"] == "run-1"
+
+
+def test_check_single_annotator_accepts_a_cached_identity():
+    """The hot path must compare against one cached tuple, not rescan the corpus."""
+
+    from sightline.m2a.annotate import check_single_annotator, declared_identity
+
+    rows = [
+        {
+            "model": "m",
+            "revision": "r",
+            "quantization": "fp8",
+            "prompt_sha256": "p",
+            "chat_template_sha256": "c",
+        }
+    ]
+    identity = declared_identity(rows)
+
+    check_single_annotator(identity, dict(rows[0]))
+    with pytest.raises(ValueError, match="annotator"):
+        check_single_annotator(identity, {**rows[0], "model": "other"})

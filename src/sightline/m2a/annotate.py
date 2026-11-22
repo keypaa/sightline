@@ -75,28 +75,47 @@ _ANNOTATOR_KEYS = (
 )
 
 
-def check_single_annotator(existing: list[dict[str, Any]], row: dict[str, Any]) -> None:
-    """Refuse a row written by a different annotator than the corpus already has.
+def declared_identity(
+    existing: list[dict[str, Any]],
+) -> tuple[Any, ...] | None:
+    """The corpus's annotator identity, computed once at startup.
 
-    A corpus with two annotators cannot be compared to itself, and the difference
-    is invisible in a loss curve. Refusing at write time is cheaper than detecting
-    it in the manifest afterwards.
+    A row with no annotator recorded predates this schema and cannot be compared,
+    so it is skipped; the first row that does declare one sets the identity.
     """
 
-    if not existing:
+    for row in existing:
+        values = tuple(row.get(key) for key in _ANNOTATOR_KEYS)
+        if all(value is not None for value in values):
+            return values
+    return None
+
+
+def check_single_annotator(
+    identity: tuple[Any, ...] | list[dict[str, Any]] | None, row: dict[str, Any]
+) -> None:
+    """Refuse a row written by a different annotator than the corpus already has.
+
+    Accepts a cached identity tuple (the hot path, O(1) per row) or the full row
+    list for callers that only check once. Scanning all existing rows on every
+    write is quadratic and made a 20k run appear to hang near the end.
+    """
+
+    if identity is None:
         return
-    # A row with no annotator recorded predates this schema. It cannot be compared,
-    # so it is skipped rather than blocking the run; rows that do declare an
-    # annotator must all agree with each other.
-    declared = [row for row in existing if all(row.get(key) is not None for key in _ANNOTATOR_KEYS)]
-    if not declared:
-        return
-    first = declared[0]
-    for key in _ANNOTATOR_KEYS:
-        if row.get(key) != first.get(key):
-            raise ValueError(
-                f"annotator identity differs from the first row in this corpus ({key})"
-            )
+    if isinstance(identity, list):
+        identity = declared_identity(identity)
+        if identity is None:
+            return
+    current = tuple(row.get(key) for key in _ANNOTATOR_KEYS)
+    if current != identity:
+        differs = next(
+            (key for key, a, b in zip(_ANNOTATOR_KEYS, identity, current, strict=True) if a != b),
+            "identity",
+        )
+        raise ValueError(
+            f"annotator identity differs from the first row in this corpus ({differs})"
+        )
 
 
 def annotate_one(
