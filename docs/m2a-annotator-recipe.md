@@ -1,168 +1,275 @@
-# M2a annotator recipe: Qwen3.6-27B-FP8 on one RTX PRO 6000
+# M2a annotator recipe — end to end
 
-Reproduction record for the local annotation server. Every value here was run on the
-GPU box on 2026-11-21, not read from a table. The authority for version floors is
-`DECISIONS/0050`; the authority for the corpus and thresholds is `DECISIONS/0046`
-and `DECISIONS/0049`.
+Reproduction record for the local annotation server and the corpus build. Every value
+here was run on the GPU box on 2026-11-21, not read from a table.
 
-## Why this recipe exists
+Authorities: `DECISIONS/0040` (annotator contract), `0046` (corpus source), `0049`
+(claim verification), `0050` (dependencies), and the schema spec
+`zenno/specs/2026-11-21-m2a-corpus-schemas.md`.
 
-The API transport (Kilo free tier) is capped at roughly 200 requests per hour per IP
-[V — Kilo docs], and two runs died near 145 calls. At that rate 20k conversations is a
-multi-week job. A local vLLM server removes the quota entirely.
+## 0. What this produces
 
-## 1. Install (serving box only)
+```
+fetched.jsonl → conversations.jsonl → claims.jsonl → verdicts.jsonl
+                                                   → blind.jsonl
+                                                   → decisions.jsonl
+                                                   → corpus-manifest.json
+```
+
+Each row carries the identity of what produced it. `claim_id` is a content hash and
+joins every layer. One annotator (Qwen3.6-27B-FP8), one verifier (hy4-flash), one blind
+reader (hy4-flash), one human review.
+
+## 1. Install (GPU box only)
 
 ```bash
+uv sync
 uv pip install -U vllm --torch-backend auto
 uv pip install -U "transformers>=5.8.0"
 ```
 
-These are not project dependencies. The annotation client speaks HTTP, so the repo's
-test environment never imports vLLM.
+Floors are pinned in `DECISIONS/0050`: vLLM ≥ 0.17.0, transformers ≥ 5.8.0. These are
+**serving-box only** — out of `pyproject.toml` — because the client speaks HTTP. The
+verified engine version was **0.34.0**; record whatever is installed with
+`python3 -c 'import vllm; print(vllm.__version__)'`.
 
-## 2. Serve
+## 2. Prepare the images
+
+A clone has `fetched.jsonl` (committed) but not the images (gitignored). From this laptop,
+push only the images the pilot or run needs:
 
 ```bash
-export VLLM_USE_FLASHINFER_SAMPLER=0
+cd /home/keypaa/Work/sightline
+PYTHONPATH=src:. python3 - <<'PY'
+import json, shutil
+from pathlib import Path
+from sightline.m2a.sample import sample_subset
+
+root = Path(".").resolve()
+dest = Path("/path/to/clone")            # the GPU box clone
+records = [json.loads(l) for l in (root/"experiments/m2a_iter20k/fetched.jsonl").open() if l.strip()]
+picked = sample_subset(records, 500, seed=0)   # pilot; use 19962 for the full corpus
+
+for r in picked:
+    target = dest / r["path"]
+    target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(root / r["path"], target)
+print(f"copied {len(picked)} images")
+PY
+```
+
+`sample_subset` is the same function the pipeline uses, so the files copied are exactly
+the files that will be read.
+
+## 3. Serve
+
+```bash
+export VLLM_USE_FLASHINFER_SAMPLER=0     # DO NOT REMOVE — see below
 export VLLM_USE_DEEP_GEMM=0
 export VLLM_USE_RUST_FRONTEND=1
 export OMP_NUM_THREADS=1
 
 vllm serve Qwen/Qwen3.6-27B-FP8 \
-  --tensor-parallel-size 1 --max-num-seqs 512 \
-  --reasoning-parser qwen3 --mm-encoder-tp-mode data \
+  --tensor-parallel-size 1 \
+  --max-model-len 8192 \
+  --max-num-seqs 512 \
+  --reasoning-parser qwen3 \
+  --mm-encoder-tp-mode data \
   --speculative-config '{"method":"mtp","num_speculative_tokens":3}'
 ```
 
-### Two flags that are not optional on this GPU
+### `VLLM_USE_FLASHINFER_SAMPLER=0` is not optional
 
-| flag | why |
-| --- | --- |
-| `VLLM_USE_FLASHINFER_SAMPLER=0` | FlashInfer's JIT sampler fails to build against the pip CUDA 13 headers: `CUDA compiler and CUDA toolkit headers are incompatible`. The flag falls back to vLLM's native PyTorch sampler. The model loads fine either way; the failure happens at the first sampling step. |
-| `OMP_NUM_THREADS=1` | The default (20) makes Torch warn about spin-wait contention and cgroup throttling during serving. |
+FlashInfer's JIT sampler fails to compile against the pip CUDA 13 headers:
 
-Both were found by running the recipe. Without them the server starts and then dies
-during warm-up, which looks like a model problem but is not.
+```
+error: "CUDA compiler and CUDA toolkit headers are incompatible, please check your include paths"
+```
+
+The model loads fine; the server dies at the first sampling step during warm-up. The flag
+falls back to vLLM's native PyTorch sampler. `OMP_NUM_THREADS=1` clears a spin-wait
+contention warning from the default of 20.
+
+`--max-model-len 8192` matters for throughput: our prompts are ~460 input + ~110 output
+tokens. Serving a 262K context reserves capacity for length we never use.
 
 ### Expected healthy startup
 
 ```
 Model loading took 28.94 GiB memory
 GPU KV cache size: 862,563 tokens
-init engine (profile, create kv cache, warmup model) took 173.70 s
+init engine (profile, create kv cache, warmup model) took ~174 s
 OpenAI server is ready to accept requests bind_address="0.0.0.0:8000"
 ```
 
-### Throughput observed
+## 4. Find your concurrency before the full run
 
-| metric | value |
-| --- | --- |
-| single-stream generation | ~92.7 tok/s |
-| speculative decoding acceptance | 3.77 tokens mean, ~92% draft acceptance |
-| per-request latency, image + prompt | ~0.7–1.6 s |
+Published numbers for this model on one RTX PRO 6000, 8K context [S — LocalMaxxing]:
 
-The pilot is sequential by design, because it measures per-conversation quality rather
-than throughput. A 20k run would need concurrency.
+| concurrency | aggregate tok/s |
+|---|---|
+| 1 | 78 |
+| 8 | 483 |
+| 16 | 770 |
+| 32 | 1,103 |
+| 64 | 1,425 |
 
-## 3. Run the pilot
+Our pilot ran sequentially at **99.7 tok/s**, 3,276 conversations/hour. The annotate
+command is concurrent (`--workers`); the pilot simply didn't use it. The projection at
+c=32 is ~36,000 conversations/hour — roughly 20k in 35 minutes.
+
+**Measure before committing** (rule 9). Time 200 conversations at three settings and
+record each in the run record:
 
 ```bash
-PYTHONPATH=src python3 tools/m2a_annotator_pilot.py \
-  --images 500 \
-  --exclude experiments/m2a_grounding/labels.jsonl \
+for W in 8 16 32; do
+  PYTHONPATH=src python3 tools/build_m2a.py --root experiments/m2a_probe annotate \
+    --workers $W --limit 200 \
+    --host http://localhost:8000/v1 \
+    --model Qwen/Qwen3.6-27B-FP8 \
+    --revision a56219b8202864dc6d3e565be5ff1eea01f54cb4 \
+    --quantization fp8 --engine-version 0.34.0 \
+    --chat-template-sha256 "<computed below>"
+done
+```
+
+Compute the template hash once:
+
+```bash
+python3 -c "
+from transformers import AutoTokenizer; import hashlib
+t=AutoTokenizer.from_pretrained('Qwen/Qwen3.6-27B-FP8')
+print(hashlib.sha256(t.chat_template.encode()).hexdigest()[:16])"
+```
+
+Pick the knee of the curve. Do not assume 32 is best on your build.
+
+## 5. Run the 20k annotation
+
+```bash
+cd /path/to/sightline
+
+PYTHONPATH=src python3 tools/build_m2a.py --root experiments/m2a_iter20k annotate \
+  --workers 32 \
   --host http://localhost:8000/v1 \
   --model Qwen/Qwen3.6-27B-FP8 \
   --revision a56219b8202864dc6d3e565be5ff1eea01f54cb4 \
   --quantization fp8 \
-  --engine-version "$(python3 -c 'import vllm; print(vllm.__version__)')" \
-  --chat-template-sha256 "$(python3 -c "
-from transformers import AutoTokenizer; import hashlib
-t=AutoTokenizer.from_pretrained('Qwen/Qwen3.6-27B-FP8')
-print(hashlib.sha256(t.chat_template.encode()).hexdigest()[:16])")"
+  --engine-version 0.34.0 \
+  --chat-template-sha256 1b8361565cc35d47 \
+  --seed 0
 ```
 
-### Why each argument is there
+The four provenance flags are **required** — argparse exits 2 without them. A row that
+cannot be reproduced is worse than no row.
 
-| argument | value | source |
-| --- | --- | --- |
-| `--images 500` | fresh sample, large enough to resolve the rates | `DECISIONS/0049` |
-| `--exclude` | the 50 burned images that shaped the instrument | `DECISIONS/0049` |
-| `--model` | the pinned annotator | `DECISIONS/0040` |
-| `--revision` | `a56219b8202864dc6d3e565be5ff1eea01f54cb4` — the checkpoint's own commit | Hugging Face API, read 2026-11-21 |
-| `--quantization` | `fp8` | the served checkpoint |
-| `--engine-version` | resolved from the installed vLLM | recorded, not assumed |
-| `--chat-template-sha256` | resolved from the tokenizer | recorded, not assumed |
-
-The four provenance flags are **required**. The pilot refuses to write a row without
-them, because a row that cannot be reproduced is worse than no row.
-
-### What it writes
+What it writes:
 
 | file | contents |
 | --- | --- |
-| `experiments/m2a_pilot/pilot.jsonl` | one row per conversation, with full provenance |
-| `experiments/m2a_pilot/summary.json` | parse rate, token means, wall time, throughput |
-| `experiments/m2a_pilot/run_record.json` | git state, config, and the summary together |
-| `reports/m2a-annotator-pilot-local.md` | the human-readable run record |
+| `experiments/m2a_iter20k/conversations.jsonl` | one row per image, full provenance |
+| `experiments/m2a_iter20k/annotate_failures.jsonl` | per-run audit of unusable replies |
 
-### Reading the exit code
+**Exit codes:** 0 = all pending done; 1 = partial results kept, re-run to resume; 2 =
+refused to run. Resume is by id and safe — only `parsed=True` rows count as done.
+`order.jsonl` fixes the corpus permutation; re-running does not re-shuffle.
 
-| code | meaning |
-| --- | --- |
-| 0 | parse bar met (and grounding measured and met, when measurable) |
-| 1 | a bar was missed, or the run stopped early |
-| 2 | refused to run: no input, or everything excluded |
+## 6. Verify (no GPU needed, run on the laptop)
 
-**Grounding is not measurable on COCO** and is reported as `grounding_skipped`, not as
-a failure (`DECISIONS/0049`). The gate that matters here is claim contradiction,
-measured afterwards by `sightline.m2a.verify`.
-
-## 4. After the pilot: claim verification
-
-Runs on the laptop (no GPU). It needs `pilot.jsonl` and the image cache; the images
-are already in `artifacts/m2a_images/`, so only the pilot output has to travel.
+Copy `conversations.jsonl` back to the laptop. All 19,994 images are already in
+`artifacts/m2a_images/`, so no image transfer is needed.
 
 ```bash
-# 1. conversations -> claims (one declarative claim per Q/A turn)
 PYTHONPATH=src python3 -m sightline.m2a.verify extract \
-  --conversations experiments/m2a_pilot/pilot.jsonl \
+  --conversations experiments/m2a_iter20k/conversations.jsonl \
   --out experiments/m2a_grounding/claims.jsonl
 
-# 2. true claims -> planted errors, to measure verifier rejection
 PYTHONPATH=src python3 -m sightline.m2a.verify plant \
   --claims experiments/m2a_grounding/claims.jsonl \
   --out experiments/m2a_grounding/planted.jsonl
 
-# 3. judge real and planted claims with both verifiers (resumable)
+# Judge real + planted with one verifier. Resumable: re-run after a quota interruption.
 PYTHONPATH=src python3 -m sightline.m2a.verify judge \
   --claims experiments/m2a_grounding/claims.jsonl \
   --planted experiments/m2a_grounding/planted.jsonl \
-  --out experiments/m2a_grounding/verdicts.jsonl
+  --out experiments/m2a_grounding/verdicts.jsonl \
+  --workers 1
 
-# 4. blind reading: the question with no image, from a text-only model
 PYTHONPATH=src python3 -m sightline.m2a.verify blind \
   --claims experiments/m2a_grounding/claims.jsonl \
   --out experiments/m2a_grounding/blind.jsonl
-
-# 5. fold into one summary against the frozen thresholds
-PYTHONPATH=src python3 -m sightline.m2a.verify report \
-  --verdicts experiments/m2a_grounding/verdicts.jsonl \
-  --blind experiments/m2a_grounding/blind.jsonl \
-  --out experiments/m2a_grounding/summary.json
 ```
 
-`judge` is resumable: a claim that already has a verdict from a model is not re-asked,
-so a quota interruption costs nothing on the restart.
+`judge` writes **flat rows**: one per claim per verifier, appended as each completes. A
+failed call is written with `error` set, never counted as `can't-tell`. A verdict from a
+different judging prompt is not reused on resume.
 
-Frozen thresholds (`DECISIONS/0049`): contradicted rate ≤ 0.15 (upper bound of a 95%
-cluster bootstrap by image), planted-error rejection ≥ 0.90, human agreement ≥ 0.85.
+## 7. Human review
 
-## 5. Reproducing this later
+```bash
+PYTHONPATH=src python3 tools/m2a_review.py \
+  --claims experiments/m2a_grounding/verdicts.jsonl \
+  --images-dir artifacts/m2a_images \
+  --out /tmp/opencode/m2a_review.html \
+  --sample 50 --seed 0
+```
 
-Record with every run: the vLLM version, the transformers version, the model revision,
-the four provenance flags, and the two environment flags above. The engine version is
-already in every pilot row and in `run_record.json`.
+The page is self-contained. Checkboxes persist in browser local storage. **Export
+decisions** downloads a JSON file; fold it in with:
 
-If vLLM or transformers is upgraded, re-run the 3-image smoke test before trusting a
-full run — kernel selection and chat-template rendering can both change.
+```bash
+PYTHONPATH=src python3 tools/m2a_review.py \
+  --merge ~/Downloads/m2a_review_decisions.json \
+  --claims experiments/m2a_grounding/claims.jsonl \
+  --decisions-out experiments/m2a_grounding/decisions.jsonl \
+  --reviewer owner
+```
+
+Decisions whose `(image_id, turn, claim_id)` cannot be resolved are rejected, not
+written. `truth` is optional — fill it when a verdict is wrong.
+
+## 8. Gates
+
+```bash
+PYTHONPATH=src python3 -m sightline.m2a.verify report \
+  --verdicts experiments/m2a_grounding/verdicts.jsonl \
+  --blind experiments/m2a_grounding/blind.jsonl
+
+PYTHONPATH=src python3 tools/build_m2a.py \
+  --root experiments/m2a_iter20k corpus-manifest
+```
+
+Frozen in `DECISIONS/0049`:
+
+| gate | threshold |
+| --- | --- |
+| contradicted rate, upper 95% | ≤ 0.15 |
+| planted-error rejection | ≥ 0.90 |
+| human agreement | ≥ 0.85 |
+
+The contradiction rate is over judged claims only; rows with `error` are gaps. The
+manifest names the git commit that built it and emits `n_judged` and `n_planted` so the
+denominators are visible.
+
+**Judge the run on the contradiction rate, not the old grounded bar.** The 0.90 from
+`DECISIONS/0040` belonged to the retired attribute-map instrument.
+
+## 9. Before a full 131k run
+
+Two things are still `[U]` in `DECISIONS/0046`:
+
+- MMMU-Pro and BLINK image sets at a pinned revision, for SSCD decontamination.
+- The number of conversations per image actually achieved by the 20k run.
+
+Do not launch 131k until both are closed.
+
+## Troubleshooting
+
+| symptom | cause |
+| --- | --- |
+| server dies during warm-up with "CUDA compiler and CUDA toolkit headers are incompatible" | `VLLM_USE_FLASHINFER_SAMPLER=0` was dropped |
+| `argparse: the following arguments are required: --revision` | a provenance flag is missing; supply the real value |
+| `contradiction_rate: null` in report | no verdict rows, or every one has `error` set |
+| judge produces no file | a failed call with no `error` row — check the build; errors must be persisted |
+| resume re-judges everything | claims were extracted before `claim_id` was added; re-run `extract` |
+| human decisions all rejected | old review page without `claim_id`/`turn`; regenerate the page |
