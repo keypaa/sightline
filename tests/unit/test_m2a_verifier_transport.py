@@ -223,3 +223,27 @@ def test_an_empty_completion_is_a_transport_error(monkeypatch, tmp_path):
 
     with pytest.raises(TransportError):
         OpencodeCaller("m")(None, "prompt")
+
+
+def test_local_transport_rejects_an_empty_completion(monkeypatch, tmp_path):
+    """A 200 with content=None must be a transport error, not an annotate crash."""
+
+    from sightline.m2a.local_transport import LocalVLLM
+
+    class Resp:
+        status_code = 200
+
+        def json(self):
+            return {
+                "choices": [{"message": {"content": None}}],
+                "usage": {"prompt_tokens": 10, "completion_tokens": 512},
+            }
+
+    monkeypatch.setattr("sightline.m2a.local_transport.requests.post", lambda *a, **k: Resp())
+    from PIL import Image
+
+    image = tmp_path / "a.jpg"
+    Image.new("RGB", (8, 8), "red").save(image)
+
+    with pytest.raises(TransportError, match="no content"):
+        LocalVLLM("m", base_url="http://x/v1")("m", image, "prompt")

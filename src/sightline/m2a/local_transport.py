@@ -94,4 +94,8 @@ class LocalVLLM:
         text = body["choices"][0]["message"]["content"]
         usage = body["usage"]
         tokens = {"input": usage["prompt_tokens"], "output": usage["completion_tokens"]}
+        # An HTTP 200 with content=None happens when reasoning consumes the whole
+        # budget. That is a failed annotation, not a blank answer to parse.
+        if not text:
+            raise TransportError("vLLM returned no content")
         return text, tokens

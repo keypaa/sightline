@@ -159,8 +159,16 @@ def test_cmd_annotate_uses_recorded_order_and_one_annotator(tmp_path: Path, monk
     seen: list[tuple] = []
 
     class FakeVLLM:
-        def __init__(self, model: str, *, base_url: str, temperature: float = 0.0) -> None:
+        def __init__(
+            self,
+            model: str,
+            *,
+            base_url: str,
+            temperature: float = 0.0,
+            chat_template_kwargs: dict | None = None,
+        ) -> None:
             seen.append(("init", model, base_url, temperature))
+            assert chat_template_kwargs == {"enable_thinking": False}
 
         def __call__(self, model: str, image_path: Path, prompt: str):
             seen.append(("call", model))
