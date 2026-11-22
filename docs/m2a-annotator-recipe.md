@@ -115,19 +115,27 @@ OpenAI server is ready to accept requests bind_address="0.0.0.0:8000"
 
 ## 4. Find your concurrency before the full run
 
-Published numbers for this model on one RTX PRO 6000, 8K context [S — LocalMaxxing]:
+**Measured on this box, 2026-11-22** [V — `reports/m2a-annotator-concurrency-probe.md`,
+`DECISIONS/0051`]:
 
-| concurrency | aggregate tok/s |
-|---|---|
-| 1 | 78 |
-| 8 | 483 |
-| 16 | 770 |
-| 32 | 1,103 |
-| 64 | 1,425 |
+| workers | conversations/hour | output tok/s |
+| --- | --- | --- |
+| 8 | 8,298 | 254.3 |
+| **16** | **21,900** | 671.0 |
+| 32 | 23,736 | 722.3 |
 
-Our pilot ran sequentially at **99.7 tok/s**, 3,276 conversations/hour. The annotate
-command is concurrent (`--workers`); the pilot simply didn't use it. The projection at
-c=32 is ~36,000 conversations/hour — roughly 20k in 35 minutes.
+**Use `--workers 16`.** It delivers 92.3% of c=32's throughput; the extra 8.4% buys
+~15 minutes over a 3.3-hour run and is not worth the added client load.
+
+Published numbers from other benches [S — LocalMaxxing] are included for reference
+only: at 8K context they measured 78 tok/s at c=1, 483 at c=8, 770 at c=16 and 1,103
+at c=32. Our measured c=16 output of 671 tok/s is in the same range.
+
+The earlier 3,276 conversations/hour in the pilot came from running sequentially at
+c=1, not from the GPU being slow.
+
+If you want to re-measure, the procedure below is unchanged. Otherwise go straight to
+section 5 with `--workers 16`.
 
 **Measure before committing** (rule 9). `annotate` reads `fetched.jsonl` from its
 `--root`, so each probe needs its own root. The `cp` below copies that small committed
@@ -197,14 +205,14 @@ the run record before choosing — do not pick 32 because the table says so.
 
 ## 5. Run the 20k annotation
 
-Use the `$TEMPLATE_SHA` exported in section 4 and the `--workers` value you selected
-from the probe. Do not reuse the hardcoded values from an earlier run.
+Use the `$TEMPLATE_SHA` exported in section 4. `--workers 16` is the measured choice
+(`DECISIONS/0051`); change it only after a new probe under a changed configuration.
 
 ```bash
 cd /path/to/sightline
 
 PYTHONPATH=src python3 tools/build_m2a.py --root experiments/m2a_iter20k annotate \
-  --workers <WINNER_FROM_PROBE> \
+  --workers 16 \
   --base-url http://localhost:8000/v1 \
   --model Qwen/Qwen3.6-27B-FP8 \
   --revision a56219b8202864dc6d3e565be5ff1eea01f54cb4 \
