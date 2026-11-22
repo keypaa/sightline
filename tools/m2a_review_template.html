@@ -225,20 +225,18 @@ function setAll(value) {
 function clearAll() { localStorage.removeItem(KEY); paint(); }
 
 function exportJson() {
-  const rows = Object.entries(load()).map(([k, v]) => {
-    const [id, turn] = k.split(":");
-    return { image_id: Number(id), turn: Number(turn), decision: v };
-  });
-  const blob = new Blob([JSON.stringify({ decisions: rows }, null, 2)], { type: "application/json" });
   const byPair = {};
-  for (const c of cards) { byPair[`${c.dataset.id}:${c.dataset.turn}`] = c.dataset.claimId || null; }
-  const decisions = Object.entries(JSON.parse(localStorage.getItem(KEY) || "{}"))
+  for (const c of document.querySelectorAll(".card")) {
+    byPair[`${c.dataset.id}:${c.dataset.turn}`] = c.dataset.claimId || null;
+  }
+  const decisions = Object.entries(load())
     .filter(([, v]) => v)
     .map(([k, v]) => {
       const [id, turn] = k.split(":");
       return { image_id: Number(id), turn: Number(turn), decision: v,
                claim_id: byPair[`${id}:${turn}`] || null };
     });
+  const blob = new Blob([JSON.stringify({ decisions }, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = "m2a_review_decisions.json";

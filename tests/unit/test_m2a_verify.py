@@ -530,3 +530,71 @@ def test_an_empty_completion_is_an_error_not_a_cant_tell():
 
     verdict, _ = judge_verdict("")
     assert verdict == "can't-tell"
+
+
+def test_a_retry_can_heal_a_previous_error_row(monkeypatch, tmp_path):
+    """An error row from a 429 must not poison the claim forever."""
+
+    import sightline.m2a.verify as verify
+
+    claims = tmp_path / "claims.jsonl"
+    claims.write_text(
+        json.dumps(
+            {
+                "claim_id": "a",
+                "image_id": 1,
+                "turn": 1,
+                "claim": "Red (car)",
+                "claim_type": "colour",
+                "answer": "Red.",
+                "question": "q",
+                "image_path": None,
+            }
+        )
+        + "\n"
+    )
+    verdicts = tmp_path / "v.jsonl"
+    verdicts.write_text(
+        json.dumps(
+            {
+                "claim_id": "a",
+                "image_id": 1,
+                "verifier_model": "v",
+                "verdict": "can't-tell",
+                "error": "429",
+                "planted": False,
+            }
+        )
+        + "\n"
+    )
+
+    class Good:
+        model = "v"
+
+        def __call__(self, image, prompt):
+            return "true\nbecause"
+
+    import sightline.m2a.verifier_transport as vt
+
+    monkeypatch.setattr(vt, "OpencodeCaller", lambda model, timeout=300: Good())
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "verify",
+            "judge",
+            "--claims",
+            str(claims),
+            "--models",
+            "v",
+            "--out",
+            str(verdicts),
+            "--workers",
+            "1",
+        ],
+    )
+    verify.main()
+
+    rows = [json.loads(line) for line in verdicts.read_text().splitlines() if line.strip()]
+    assert len(rows) == 1
+    assert rows[0]["verdict"] == "true"
+    assert rows[0]["error"] is None

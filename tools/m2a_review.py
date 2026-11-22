@@ -37,25 +37,42 @@ def read_jsonl(path: Path) -> list[dict[str, Any]]:
 
 
 def _verdict_rows(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Flatten claim results into one row per claim, with each verifier's view."""
+    """Group the judge's flat verdict rows into one card per claim.
 
-    rows = []
-    for result in results:
-        verdicts = result.get("verdicts") or []
-        rows.append(
+    judge writes one row per (claim, verifier). The page needs one card showing all
+    verdicts for a claim, so the flat rows are gathered by claim_id here.
+    """
+
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for row in results:
+        grouped.setdefault(row.get("claim_id") or str(row.get("id")), []).append(row)
+
+    cards: list[dict[str, Any]] = []
+    for cid, rows in grouped.items():
+        first = rows[0]
+        verdicts = [
             {
-                "claim_id": result.get("claim_id"),
-                "image_id": result.get("image_id") or result.get("id"),
-                "turn": result.get("turn"),
-                "claim": result.get("claim", ""),
-                "claim_type": result.get("claim_type", "unknown"),
-                "planted": bool(result.get("planted")),
+                "model": row.get("verifier_model", ""),
+                "verdict": row.get("verdict", "can't-tell"),
+                "evidence": row.get("evidence", ""),
+                "error": row.get("error"),
+            }
+            for row in rows
+        ]
+        cards.append(
+            {
+                "claim_id": cid,
+                "image_id": first.get("image_id") or first.get("id"),
+                "turn": first.get("turn"),
+                "claim": first.get("claim", ""),
+                "claim_type": first.get("claim_type", "unknown"),
+                "planted": bool(first.get("planted")),
                 "verdicts": verdicts,
-                "contradicted": bool(result.get("contradicted")),
-                "path": result.get("path") or result.get("image_path"),
+                "contradicted": any(v["verdict"] == "false" for v in verdicts),
+                "path": first.get("image_path") or first.get("path"),
             }
         )
-    return rows
+    return cards
 
 
 def stratify(rows: list[dict[str, Any]], sample: int, seed: int) -> list[dict[str, Any]]:
@@ -216,6 +233,10 @@ def merge_decisions(
     added = 0
     rejected = 0
     out.parent.mkdir(parents=True, exist_ok=True)
+    already = set()
+    if out.exists():
+        for row in read_jsonl(out):
+            already.add((row.get("claim_id"), row.get("decision")))
     with out.open("a", encoding="utf-8") as handle:
         for entry in export.get("decisions") or []:
             pair = (entry.get("image_id"), entry.get("turn"))
@@ -224,6 +245,10 @@ def merge_decisions(
             if claims_path is not None and claim_id is None:
                 rejected += 1
                 continue
+            if (claim_id, entry.get("decision")) in already:
+                # Re-merging the same export must not double-count human agreement.
+                continue
+            already.add((claim_id, entry.get("decision")))
             row = {
                 "claim_id": claim_id,
                 "image_id": pair[0],

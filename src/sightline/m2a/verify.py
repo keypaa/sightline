@@ -435,8 +435,13 @@ def wilson_upper(successes: int, n: int, z: float = 1.959964) -> float | None:
 
 
 def summarise_planted(results: list[ClaimResult]) -> dict[str, Any]:
-    """Rejection rate on planted errors — the guard against an acquiescent verifier."""
+    """Rejection rate on planted errors — the guard against an acquiescent verifier.
 
+    A call that failed is a gap, not a miss: including it would let a quota failure
+    flip the gate. This mirrors the rule used for real claims.
+    """
+
+    results = [r for r in results if r.verdicts and all(not v.error for v in r.verdicts)]
     n = len(results)
     caught = sum(1 for r in results if r.contradicted)
     return {
@@ -578,7 +583,7 @@ def judge_verdict_prompt_sha256() -> str:
     if the instructions change.
     """
 
-    return hashlib.sha256(JUDGE_INSTRUCTION.encode()).hexdigest()[:16]
+    return hashlib.sha256((JUDGE_INSTRUCTION + _ADVERSARIAL_SUFFIX).encode()).hexdigest()[:16]
 
 
 def verdict_row(
@@ -590,6 +595,13 @@ def verdict_row(
         "claim_id": claim.claim_id,
         "image_id": claim.image_id,
         "turn": claim.turn,
+        # Self-describing: a verdict row carries enough claim context that report
+        # and the review UI never need a second file to interpret it.
+        "claim": claim.claim,
+        "claim_type": claim.claim_type,
+        "question": claim.question,
+        "answer": claim.answer,
+        "planted": claim.planted,
         "verifier_model": verdict.model,
         "verifier_prompt_sha256": prompt_sha256,
         "verdict": verdict.verdict,
@@ -696,6 +708,10 @@ def judge_blind(
     claims: list[Claim], call: Any, *, model: str, on_row: Any = None
 ) -> list[dict[str, Any]]:
     """Ask a text-only model each question, with no image, and compare."""
+
+    for claim in claims:
+        if not claim.claim_id:
+            raise ValueError("claim_id is empty; re-run extract so claims carry ids")
 
     rows: list[dict[str, Any]] = []
     for claim in claims:
@@ -820,6 +836,14 @@ def main() -> int:
                 else []
             )
         callers = [OpencodeCaller(model, timeout=args.timeout) for model in args.models]
+        # An error row is a gap, not a verdict. Drop them before computing the
+        # resume set, so a claim that was rate-limited last time is re-asked and
+        # its failed row is replaced rather than poisoning the claim forever.
+        if args.out.exists():
+            prior_rows = read_jsonl(args.out)
+            keep = [row for row in prior_rows if not row.get("error")]
+            if len(keep) != len(prior_rows):
+                write_jsonl(args.out, keep)
         existing = read_jsonl(args.out)
 
         args.out.parent.mkdir(parents=True, exist_ok=True)
@@ -862,17 +886,14 @@ def main() -> int:
         print(json.dumps(summary, indent=2), flush=True)
         return 0
 
-    # judge writes flat rows: one per claim per verifier. Group them by claim_id.
+    # judge writes flat rows: one per claim per verifier. The rows are self-describing,
+    # so report needs no second file and planted claims are distinguished by their flag.
     verdict_rows = read_jsonl(args.verdicts)
-    claims_path = Path("experiments/m2a_grounding/claims.jsonl")
-    claim_text = {}
-    if claims_path.exists():
-        for row in read_jsonl(claims_path):
-            claim_text[row.get("claim_id")] = row
-
     grouped: dict[str, list[Verdict]] = {}
+    claim_text: dict[str, dict[str, Any]] = {}
     for row in verdict_rows:
-        grouped.setdefault(row.get("claim_id"), []).append(
+        cid = row.get("claim_id")
+        grouped.setdefault(cid, []).append(
             Verdict(
                 model=row.get("verifier_model", ""),
                 verdict=row.get("verdict", VERDICT_UNSURE),
@@ -880,8 +901,10 @@ def main() -> int:
                 error=row.get("error"),
             )
         )
+        claim_text.setdefault(cid, row)
+
     results = [
-        ClaimResult(claim=_claim_from_row(claim_text.get(cid, {"claim_id": cid})), verdicts=vs)
+        ClaimResult(claim=_claim_from_row(claim_text[cid]), verdicts=vs)
         for cid, vs in grouped.items()
     ]
     real = [r for r in results if not r.claim.planted]

@@ -27,7 +27,7 @@ from sightline.m2a.verify import (
 )
 from sightline.record import git_state
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 LAYERS = (
     "fetched.jsonl",

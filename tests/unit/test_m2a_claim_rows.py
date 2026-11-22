@@ -7,9 +7,13 @@ from pathlib import Path
 
 from sightline.m2a.verify import (
     Claim,
+    ClaimResult,
+    Verdict,
     _claim_from_row,
     claim_to_row,
     judge_verdict_prompt_sha256,
+    summarise_planted,
+    verdict_row,
 )
 
 CONVERSATIONS = [
@@ -140,3 +144,46 @@ def test_plant_cli_preserves_claim_ids(monkeypatch, tmp_path: Path):
     assert rows
     assert all(r["claim_id"] for r in rows)
     assert all(r["planted"] for r in rows)
+
+
+def test_verdict_row_is_self_describing():
+    """A verdict row must name its claim and whether it was planted."""
+
+    claim = Claim(
+        image_id=5,
+        turn=1,
+        question="What colour?",
+        answer="Red.",
+        claim="Red (car)",
+        claim_type="colour",
+        claim_id="abc",
+        planted=True,
+    )
+    row = verdict_row(
+        claim, Verdict("v", "false", "no"), prompt_sha256="p", judged_at="2026-11-21T00:00:00+00:00"
+    )
+
+    assert row["planted"] is True
+    assert row["claim"] == "Red (car)"
+    assert row["claim_type"] == "colour"
+    assert row["question"] == "What colour?"
+
+
+def test_planted_rejection_excludes_errored_rows():
+
+    rows = [
+        ClaimResult(
+            Claim(0, 1, "q", "a", "c", "colour", claim_id="a", planted=True),
+            verdicts=[Verdict("v", "false")],
+        ),
+        ClaimResult(
+            Claim(1, 1, "q", "a", "c", "colour", claim_id="b", planted=True),
+            verdicts=[Verdict("v", "can't-tell", error="429")],
+        ),
+    ]
+
+    summary = summarise_planted(rows)
+
+    assert summary["n_planted"] == 1
+    assert summary["rejection_rate"] == 1.0
+    assert summary["passes"] is True
