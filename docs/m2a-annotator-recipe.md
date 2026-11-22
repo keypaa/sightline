@@ -132,7 +132,8 @@ c=32 is ~36,000 conversations/hour — roughly 20k in 35 minutes.
 **Measure before committing** (rule 9). `annotate` reads `fetched.jsonl` from its
 `--root`, so each probe needs its own root. The `cp` below copies that small committed
 **manifest** — not images; the images were staged by section 2 into the shared cache.
-Wall time is not in the run record, so wrap each run in `/usr/bin/time`.
+Wall time is not in the run record, so `date` brackets each run and writes
+`WALL_SECONDS` to a file. This works on boxes without `/usr/bin/time`.
 
 First compute the template hash once and export it:
 
@@ -154,8 +155,8 @@ done
 
 for W in 8 16 32; do
   echo "=== concurrency $W ==="
-  /usr/bin/time -f "WALL_SECONDS=%e" -o experiments/m2a_probe/c$W/time.txt \
-    env PYTHONPATH=src python3 tools/build_m2a.py --root experiments/m2a_probe/c$W annotate \
+  START=$(date +%s.%N)
+  PYTHONPATH=src python3 tools/build_m2a.py --root experiments/m2a_probe/c$W annotate \
       --workers $W --limit 200 \
       --host http://localhost:8000/v1 \
       --model Qwen/Qwen3.6-27B-FP8 \
@@ -163,6 +164,9 @@ for W in 8 16 32; do
       --quantization fp8 --engine-version 0.34.0 \
       --chat-template-sha256 "$TEMPLATE_SHA" \
     | tee experiments/m2a_probe/c$W/log.txt
+  END=$(date +%s.%N)
+  python3 -c "print(f'WALL_SECONDS={$END - $START:.3f}')" \
+    > experiments/m2a_probe/c$W/time.txt
 done
 ```
 
