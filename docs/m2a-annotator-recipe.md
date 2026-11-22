@@ -20,13 +20,25 @@ Each row carries the identity of what produced it. `claim_id` is a content hash 
 joins every layer. One annotator (Qwen3.6-27B-FP8), one verifier (hy4-flash), one blind
 reader (hy4-flash), one human review.
 
-## 1. Install (GPU box only)
+## 1. Clone and install (GPU box)
+
+From a clean directory on the GPU box:
 
 ```bash
+git clone https://github.com/keypaa/sightline.git
+cd sightline
+git checkout m2a-annotation
+git pull origin m2a-annotation
+
 uv sync
 uv pip install -U vllm --torch-backend auto
 uv pip install -U "transformers>=5.8.0"
+
+git rev-parse HEAD          # record this with the run
 ```
+
+The branch matters: `main` does not contain the corpus pipeline. `uv sync` installs the
+project; the two `uv pip install` lines add the serving-only dependencies.
 
 Floors are pinned in `DECISIONS/0050`: vLLM ≥ 0.17.0, transformers ≥ 5.8.0. These are
 **serving-box only** — out of `pyproject.toml` — because the client speaks HTTP. The
@@ -118,31 +130,66 @@ Our pilot ran sequentially at **99.7 tok/s**, 3,276 conversations/hour. The anno
 command is concurrent (`--workers`); the pilot simply didn't use it. The projection at
 c=32 is ~36,000 conversations/hour — roughly 20k in 35 minutes.
 
-**Measure before committing** (rule 9). Time 200 conversations at three settings and
-record each in the run record:
+**Measure before committing** (rule 9). `annotate` reads `fetched.jsonl` from its
+`--root`, so each probe needs its own root with that file copied in. Wall time is not
+in the run record, so wrap each run in `/usr/bin/time`.
+
+First compute the template hash once and export it:
+
+```bash
+export TEMPLATE_SHA="$(python3 -c "
+from transformers import AutoTokenizer; import hashlib
+t=AutoTokenizer.from_pretrained('Qwen/Qwen3.6-27B-FP8')
+print(hashlib.sha256(t.chat_template.encode()).hexdigest()[:16])")"
+echo "$TEMPLATE_SHA"
+```
+
+Then give each probe its own root and run it:
 
 ```bash
 for W in 8 16 32; do
-  PYTHONPATH=src python3 tools/build_m2a.py --root experiments/m2a_probe annotate \
-    --workers $W --limit 200 \
-    --host http://localhost:8000/v1 \
-    --model Qwen/Qwen3.6-27B-FP8 \
-    --revision a56219b8202864dc6d3e565be5ff1eea01f54cb4 \
-    --quantization fp8 --engine-version 0.34.0 \
-    --chat-template-sha256 "<computed below>"
+  mkdir -p experiments/m2a_probe/c$W
+  cp experiments/m2a_iter20k/fetched.jsonl experiments/m2a_probe/c$W/fetched.jsonl
+done
+
+for W in 8 16 32; do
+  echo "=== concurrency $W ==="
+  /usr/bin/time -f "WALL_SECONDS=%e" -o experiments/m2a_probe/c$W/time.txt \
+    env PYTHONPATH=src python3 tools/build_m2a.py --root experiments/m2a_probe/c$W annotate \
+      --workers $W --limit 200 \
+      --host http://localhost:8000/v1 \
+      --model Qwen/Qwen3.6-27B-FP8 \
+      --revision a56219b8202864dc6d3e565be5ff1eea01f54cb4 \
+      --quantization fp8 --engine-version 0.34.0 \
+      --chat-template-sha256 "$TEMPLATE_SHA" \
+    | tee experiments/m2a_probe/c$W/log.txt
 done
 ```
 
-Compute the template hash once:
+### Reading the score
+
+For each concurrency, from the files just written:
 
 ```bash
-python3 -c "
-from transformers import AutoTokenizer; import hashlib
-t=AutoTokenizer.from_pretrained('Qwen/Qwen3.6-27B-FP8')
-print(hashlib.sha256(t.chat_template.encode()).hexdigest()[:16])"
+for W in 8 16 32; do
+python3 - "$W" <<'PY'
+import json, sys
+from pathlib import Path
+w = sys.argv[1]
+root = Path(f"experiments/m2a_probe/c{w}")
+wall = float([l for l in (root/"time.txt").read_text().splitlines()
+              if l.startswith("WALL_SECONDS=")][0].split("=")[1])
+rows = [json.loads(l) for l in (root/"conversations.jsonl").read_text().splitlines() if l.strip()]
+out = sum(r.get("tokens_out") or 0 for r in rows)
+print(f"c={w}: n={len(rows)} wall={wall:.1f}s "
+      f"conv/hour={len(rows)*3600/wall:.0f} output_tok/s={out/wall:.1f}")
+PY
+done
 ```
 
-Pick the knee of the curve. Do not assume 32 is best on your build.
+Pick the knee: the lowest concurrency whose conv/hour is within ~10% of the best.
+Higher c adds latency and risk without much throughput. Record all three numbers in
+the run record before choosing — do not pick 32 because the table says so.
 
 ## 5. Run the 20k annotation
 
