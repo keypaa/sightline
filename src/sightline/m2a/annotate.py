@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from sightline.m2a.prompt import PROMPT, parse_messages
+from sightline.m2a.transport import RateLimited, TransportError
 
 Transport = Callable[[str, Path, str], tuple[str, dict[str, Any] | None]]
 
@@ -122,3 +123,29 @@ def annotate_one(
         "tokens_out": (tokens or {}).get("output"),
         "image_sha256": file_hash(image_path),
     }
+
+
+def annotate_with_retry(
+    model: str,
+    image_path: Path,
+    call: Transport,
+    *,
+    annotator: dict[str, Any] | None = None,
+    attempts: int = 3,
+) -> dict[str, Any]:
+    """Retry an empty completion from the local server; never retry a quota error.
+
+    Under load the server occasionally returns HTTP 200 with no content. That is a
+    transient glitch, not a reason to abort a corpus run. A confirmed rate limit is
+    different: it must reach the guard so the whole pool stops and waits.
+    """
+
+    for attempt in range(attempts):
+        try:
+            return annotate_one(model, image_path, call, annotator=annotator)
+        except RateLimited:
+            raise
+        except TransportError as exc:
+            if "no content" not in str(exc) or attempt == attempts - 1:
+                raise
+    raise AssertionError("unreachable")

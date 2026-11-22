@@ -356,3 +356,44 @@ def test_check_single_annotator_skips_rows_with_no_identity():
 
     existing = [{"id": 0, "parsed": True}]
     check_single_annotator(existing, {"model": "m", "revision": "r"})
+
+
+def test_a_transient_empty_completion_is_retried(tmp_path):
+    """One empty reply must be retried, not kill 20k annotations."""
+
+    from PIL import Image
+
+    from sightline.m2a.annotate import annotate_with_retry
+    from sightline.m2a.transport import TransportError
+
+    image = tmp_path / "a.jpg"
+    Image.new("RGB", (8, 8), "red").save(image)
+
+    attempts = []
+
+    def flaky(model, image_path, prompt):
+        attempts.append(model)
+        if len(attempts) < 3:
+            raise TransportError("vLLM returned no content")
+        return GOOD, {"input": 1, "output": 2}
+
+    result = annotate_with_retry("m", image, flaky, annotator={"model": "m"})
+
+    assert len(attempts) == 3
+    assert result["parsed"] is True
+
+
+def test_a_persistent_empty_completion_still_raises(tmp_path):
+    from PIL import Image
+
+    from sightline.m2a.annotate import annotate_with_retry
+    from sightline.m2a.transport import TransportError
+
+    image = tmp_path / "a.jpg"
+    Image.new("RGB", (8, 8), "red").save(image)
+
+    def always_empty(model, image_path, prompt):
+        raise TransportError("vLLM returned no content")
+
+    with pytest.raises(TransportError):
+        annotate_with_retry("m", Path("a.jpg"), always_empty, annotator={"model": "m"}, attempts=2)
