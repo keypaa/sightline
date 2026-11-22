@@ -149,3 +149,27 @@ def annotate_with_retry(
             if "no content" not in str(exc) or attempt == attempts - 1:
                 raise
     raise AssertionError("unreachable")
+
+
+def failed_row(
+    record: dict[str, Any], error: str, *, run_id: str, created_at: str
+) -> dict[str, Any]:
+    """A row for an image that could not be annotated, so the run continues.
+
+    It stays in conversations.jsonl with parsed=False, which makes resume retry it.
+    The error is recorded rather than swallowed.
+    """
+
+    row = {key: value for key, value in record.items() if key != "path"}
+    row.update(
+        {
+            "messages": None,
+            "parsed": False,
+            "tokens_in": None,
+            "tokens_out": None,
+            "error": error,
+            "run_id": run_id,
+            "created_at": created_at,
+        }
+    )
+    return row

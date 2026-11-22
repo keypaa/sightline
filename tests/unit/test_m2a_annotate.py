@@ -397,3 +397,22 @@ def test_a_persistent_empty_completion_still_raises(tmp_path):
 
     with pytest.raises(TransportError):
         annotate_with_retry("m", Path("a.jpg"), always_empty, annotator={"model": "m"}, attempts=2)
+
+
+def test_a_failed_annotation_becomes_a_row_not_a_crash():
+    """A bad image must not stop the other 19,999 from being annotated."""
+
+    from sightline.m2a.annotate import failed_row
+
+    row = failed_row(
+        {"id": 7, "file_name": "a.jpg", "sha256": "ab"},
+        "vLLM returned no content",
+        run_id="run-1",
+        created_at="2026-11-21T00:00:00+00:00",
+    )
+
+    assert row["id"] == 7
+    assert row["parsed"] is False
+    assert row["messages"] is None
+    assert row["error"] == "vLLM returned no content"
+    assert row["run_id"] == "run-1"
