@@ -160,9 +160,10 @@ def _get(url: str) -> bytes:
 
 def cmd_annotate(args: argparse.Namespace) -> int:
     from sightline.m2a.annotate import (
-        annotate_one,
         annotate_row,
+        annotate_with_retry,
         check_single_annotator,
+        failed_row,
         pending_records,
         prompt_hash,
     )
@@ -170,7 +171,7 @@ def cmd_annotate(args: argparse.Namespace) -> int:
     from sightline.m2a.local_transport import LocalVLLM
     from sightline.m2a.order import apply_order, read_order
     from sightline.m2a.provenance import annotator_fields
-    from sightline.m2a.transport import retry_loop
+    from sightline.m2a.transport import RateLimited, retry_loop
 
     incoming = read_jsonl(args.root / "fetched.jsonl")
     order_path = args.root / "order.jsonl"
@@ -203,7 +204,15 @@ def cmd_annotate(args: argparse.Namespace) -> int:
     )
     # The call-time model wins in LocalVLLM, so pass the same string annotate_one
     # records; the POST payload and the row provenance cannot disagree.
-    call = LocalVLLM(args.model, base_url=args.base_url, temperature=args.temperature)
+    call = LocalVLLM(
+        args.model,
+        base_url=args.base_url,
+        temperature=args.temperature,
+        # Qwen3.6 thinks by default. Without this, reasoning can consume the whole
+        # token budget and return no JSON - the pilot already does this, so the
+        # corpus run must match it or the two stages differ.
+        chat_template_kwargs={"enable_thinking": False},
+    )
 
     out = args.root / "conversations.jsonl"
     # One identity per invocation, so every row from this run is attributable.
@@ -214,8 +223,22 @@ def cmd_annotate(args: argparse.Namespace) -> int:
     failures: list[dict] = []
 
     def work(record):
-        result = annotate_one(args.model, Path(record["path"]), call, annotator=annotator)
-        return annotate_row(record, result, run_id=run_id, created_at=now_iso())
+        try:
+            result = annotate_with_retry(
+                args.model, Path(record["path"]), call, annotator=annotator
+            )
+            return annotate_row(record, result, run_id=run_id, created_at=now_iso())
+        except RateLimited:
+            # The only failure allowed to stop the pool: a quota error needs the
+            # whole run to pause, not just this image.
+            raise
+        except Exception as exc:
+            # Nothing else may stop the corpus. A bad image, an empty completion,
+            # a decode error - all become a failed row that resume will retry.
+            # The type is recorded so an unexpected path is visible in the data.
+            return failed_row(
+                record, f"{type(exc).__name__}: {exc}", run_id=run_id, created_at=now_iso()
+            )
 
     def on_row(row):
         nonlocal finished, unparsed
