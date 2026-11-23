@@ -99,6 +99,13 @@ last two calls returned HTTP 429 "Free usage limit reached. Connect a provider
 or subscribe to OpenCode Go...". **[V]** `experiments/m2a_grounding/judge_probe.log`,
 2026-11-23. 38 of 40 rows got verdicts.
 
+The Kilo provider is capped at **200 requests per IP per hour**, and the owner
+uses the same provider for their own work. A 500+500 judge run got **39 real
+verdicts and 10 HTTP-429 rows** in 352 s before stopping; it never reached the
+planted half. **[V]** `experiments/m2a_grounding/judge_run.log`. Do not run
+`judge` or `blind` while the owner is working on Kilo; wait for an explicit go.
+At 200 req/h, a 2,000-call gate run is ~10 h even when the window is free.
+
 Measured on those 38 rows: real claims 17 true / 3 false (15% contradicted,
 n=20 — far too small for the 0.15 ceiling); planted errors 16 rejected of 18
 valid (88.9%, below the 0.90 floor), 1 accepted and 3 `can't-tell`. **[V]**
