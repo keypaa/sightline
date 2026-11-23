@@ -704,6 +704,21 @@ def judge_claims(
     return results
 
 
+def pending_blind_claims(claims: list[Claim], out: Path) -> list[Claim]:
+    """Drop failed blind rows from ``out`` and return claims still unanswered.
+
+    Resume must not pay for calls that already succeeded, and an HTTP 429 row is
+    a gap rather than a blind answer.
+    """
+
+    prior = read_jsonl(out) if out.exists() else []
+    healed = [row for row in prior if not row.get("error")]
+    if len(healed) != len(prior):
+        write_jsonl(out, healed)
+    done = {row.get("claim_id") for row in healed if row.get("blind_answer") is not None}
+    return [c for c in claims if c.claim_id not in done]
+
+
 def judge_blind(
     claims: list[Claim], call: Any, *, model: str, on_row: Any = None
 ) -> list[dict[str, Any]]:
@@ -777,6 +792,8 @@ def main() -> int:
     )
     blind.add_argument("--model", default=BLIND_MODEL)
     blind.add_argument("--out", type=Path, default=Path("experiments/m2a_grounding/blind.jsonl"))
+    blind.add_argument("--sample", type=int, default=0, help="blind at most N claims (0 means all)")
+    blind.add_argument("--sample-seed", type=int, default=0)
 
     report = sub.add_parser("report", help="fold verdicts and blind rows into a summary")
     report.add_argument(
@@ -875,18 +892,27 @@ def main() -> int:
 
     if args.command == "blind":
         claims = [_claim_from_row(row) for row in read_jsonl(args.claims)]
+        if args.sample:
+            # Same draw as judge's real claims, so blind and vision answers pair.
+            claims = sample_claims(claims, args.sample, args.sample_seed)
         caller = OpencodeCaller(args.model)
         args.out.parent.mkdir(parents=True, exist_ok=True)
+
+        # A quota failure is a gap, not a blind answer. Heal those rows and only
+        # re-ask claims that have no successful answer yet, so a long blind run
+        # can resume without paying for every call again.
+        pending = pending_blind_claims(claims, args.out)
         rows: list[dict[str, Any]] = []
-        with args.out.open("w", encoding="utf-8") as handle:
+        with args.out.open("a", encoding="utf-8") as handle:
 
             def on_row(row: dict[str, Any]) -> None:
                 handle.write(json.dumps(row) + "\n")
                 handle.flush()
                 rows.append(row)
 
-            judge_blind(claims, caller, model=args.model, on_row=on_row)
-        summary = summarise_blind(rows)
+            judge_blind(pending, caller, model=args.model, on_row=on_row)
+        all_rows = read_jsonl(args.out)
+        summary = summarise_blind(all_rows)
         print(json.dumps(summary, indent=2), flush=True)
         return 0
 

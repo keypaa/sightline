@@ -199,6 +199,30 @@ def test_judge_blind_marks_a_failed_call_instead_of_guessing():
     assert "no quota" in rows[0]["error"]
 
 
+def test_blind_resume_heals_errors_and_skips_answered_claims(tmp_path):
+    """A quota gap is re-asked; a successful blind answer is never paid for twice."""
+
+    import json
+
+    from sightline.m2a.verify import pending_blind_claims
+
+    out = tmp_path / "blind.jsonl"
+    out.write_text(
+        json.dumps({"claim_id": "a", "blind_answer": "red"})
+        + "\n"
+        + json.dumps({"claim_id": "b", "blind_answer": None, "error": "HTTP 429"})
+        + "\n"
+    )
+    claims = [
+        Claim(0, 1, "q1", "a", "A (x)", "colour", claim_id="a"),
+        Claim(0, 2, "q2", "b", "B (x)", "colour", claim_id="b"),
+        Claim(0, 3, "q3", "c", "C (x)", "colour", claim_id="c"),
+    ]
+
+    assert [c.claim_id for c in pending_blind_claims(claims, out)] == ["b", "c"]
+    assert all(json.loads(line)["claim_id"] != "b" for line in out.read_text().splitlines())
+
+
 def test_blind_model_default_matches_the_spec():
     """DECISIONS 0053: the blind reader is hy4, never the annotator."""
 
