@@ -40,7 +40,7 @@ from sightline.m2a.transport import TransportError
 VERIFIERS = ("opencode/hy4-flash-free",)
 
 # The blind reader is text-only and must not be one of the verifiers.
-BLIND_MODEL = "kilo/z-ai/glm-5-turbo:free"
+BLIND_MODEL = "opencode/hy4-flash-free"
 
 # Claim types reported separately; a single rate would hide which capability failed.
 CLAIM_TYPES = ("existence", "count", "colour", "spatial", "text", "action")

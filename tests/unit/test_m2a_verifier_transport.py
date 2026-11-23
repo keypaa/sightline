@@ -199,6 +199,15 @@ def test_judge_blind_marks_a_failed_call_instead_of_guessing():
     assert "no quota" in rows[0]["error"]
 
 
+def test_blind_model_default_matches_the_spec():
+    """DECISIONS 0053: the blind reader is hy4, never the annotator."""
+
+    from sightline.m2a.verify import BLIND_MODEL, VERIFIERS
+
+    assert BLIND_MODEL == "opencode/hy4-flash-free"
+    assert BLIND_MODEL in VERIFIERS
+
+
 def test_blind_row_carries_the_claim_id_and_model():
     claim_row = Claim(0, 1, "What colour?", "Red.", "Red (car)", "colour", claim_id="abc")
 
