@@ -93,6 +93,23 @@ sit at 0.80–0.98. **[V]** A per-task average of 0.81 conceals it; always read
 
 ## What does not work
 
+### The free opencode verifier quota cannot support a corpus-scale judging run
+A 20+20 claim judge probe took **228 s** (~5.7 s/call at `--workers 1`) and the
+last two calls returned HTTP 429 "Free usage limit reached. Connect a provider
+or subscribe to OpenCode Go...". **[V]** `experiments/m2a_grounding/judge_probe.log`,
+2026-11-23. 38 of 40 rows got verdicts.
+
+Measured on those 38 rows: real claims 17 true / 3 false (15% contradicted,
+n=20 — far too small for the 0.15 ceiling); planted errors 16 rejected of 18
+valid (88.9%, below the 0.90 floor), 1 accepted and 3 `can't-tell`. **[V]**
+These are probe-scale numbers, not a gate result; they show the instrument is
+too noisy at n=20 and that the quota is the binding constraint.
+
+**Consequence:** a 500-per-layer run needs ~1,000 calls (~95 min) and 1,500 per
+layer needs ~3,000 (~285 min), both beyond the free quota. Do not launch one
+until a provider decision is recorded. The 38 valid rows are resumable — `judge`
+drops `error` rows and re-asks them.
+
 ### vLLM serving wedges silently after ~7 h of continuous annotation
 The 20k run stopped advancing at 15,480/19,962 rows with no error line in
 `m2a_iter20k_full.log`. All three server processes (launcher, EngineCore,
